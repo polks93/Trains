@@ -8,26 +8,6 @@
 #include "ptask.h"
 #include "functions.h"
 
-#define     W                                   1280          //larghezza della finestra
-#define     H                                   630            //altezza delle finestra
-#define     INTERFACE_H                         90
-#define     INTERFACE_W                         1280
-#define     L_BUTTONS                           50
-#define     SPACE_BUTTONS                       20
-#define     H_window                            720
-#define     space                               H/9            //spazio tra un binario e l'altro
-#define     train_w                             20            //larghezza treno
-#define     train_h                             10             //altezza treno
-#define     sem_size_factor                     0.1
-#define     trail_w                             80
-#define     trail_h                             2
-#define     TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE     -32
-#define     TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE    0
-#define     TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE    -96
-#define     TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE   128
-#define     stop_space                          train_w
-
-
 //----------------------------------------------------------------------
 // FUNZIONE initialize()
 //
@@ -62,158 +42,53 @@ void initialize() {
         trains_in_binary[i]=0;
     }
     sem_g = load_bitmap("img/sem/sem_green.bmp", NULL);
-    if (sem_g == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
     sem_r = load_bitmap("img/sem/sem_red.bmp", NULL);
-    if (sem_r == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
     sem_y = load_bitmap("img/sem/sem_yellow.bmp", NULL);
-    if (sem_y == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
 
-    for (i = 1; i<TMAX; i++) {
-        train_par[i].run = false;
-    }
+    for (i = 1; i<TMAX; i++) train_par[i].run = false;
+
     // loading bitmaps of the different trains
 
     // orange binario 1
-    
     train_bmp[0].train1 = load_bitmap("img/trains/orange.bmp", NULL);
-    if (train_bmp[0].train1 == NULL) {
-        printf("File 1 not found\n");
-        exit(1);
-    }   
     train_bmp[0].train2 = load_bitmap("img/trains/orange_diag.bmp", NULL);
-    if (train_bmp[0].train2 == NULL) {
-        printf("File 2 not found\n");
-        exit(1);
-    }  
     train_bmp[0].train3 = load_bitmap("img/trains/orange_diag2.bmp", NULL);
-    if (train_bmp[0].train3 == NULL) {
-        printf("File 3 not found\n");
-        exit(1);
-    }      
-    
+
     // green binario 2
     train_bmp[1].train1 = load_bitmap("img/trains/green.bmp", NULL);
-    if (train_bmp[1].train1 == NULL) {
-        printf("File 1 not found\n");
-        exit(1);
-    }   
     train_bmp[1].train2 = load_bitmap("img/trains/green_diag.bmp", NULL);
-    if (train_bmp[1].train2 == NULL) {
-        printf("File 2 not found\n");
-        exit(1);
-    }  
-    train_bmp[1].train3 = load_bitmap("img/trains/green_diag2.bmp", NULL);
-    if (train_bmp[1].train3 == NULL) {
-        printf("File 3 not found\n");
-        exit(1);
-    }      
+    train_bmp[1].train3 = load_bitmap("img/trains/green_diag2.bmp", NULL);    
     
     // blue binario 3
     train_bmp[2].train1 = load_bitmap("img/trains/blue.bmp", NULL);
-    if (train_bmp[2].train1 == NULL) {
-        printf("File 1 not found\n");
-        exit(1);
-    }   
     train_bmp[2].train2 = load_bitmap("img/trains/blue_diag.bmp", NULL);
-    if (train_bmp[2].train2 == NULL) {
-        printf("File 2 not found\n");
-        exit(1);
-    }  
     train_bmp[2].train3 = load_bitmap("img/trains/blue_diag2.bmp", NULL);
-    if (train_bmp[2].train3 == NULL) {
-        printf("File 3 not found\n");
-        exit(1);
-    }      
 
     // red binario 4
     train_bmp[3].train1 = load_bitmap("img/trains/red.bmp", NULL);
-    if (train_bmp[3].train1 == NULL) {
-        printf("File 1 not found\n");
-        exit(1);
-    }   
     train_bmp[3].train2 = load_bitmap("img/trains/red_diag.bmp", NULL);
-    if (train_bmp[3].train2 == NULL) {
-        printf("File 2 not found\n");
-        exit(1);
-    }  
     train_bmp[3].train3 = load_bitmap("img/trains/red_diag2.bmp", NULL);
-    if (train_bmp[3].train3 == NULL) {
-        printf("File 3 not found\n");
-        exit(1);
-    }
-
 
     // bitmap dei binari mobili
     trail = load_bitmap("img/trail.bmp", NULL);
-    if (trail == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
 
     // bitmaps dei bottoni
     random_train_on = load_bitmap("img/buttons/random_on.bmp", NULL);
-    if (random_train_on == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
     random_train_off = load_bitmap("img/buttons/random_off.bmp", NULL);
-    if (random_train_off == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
+
 
     hp_train_on = load_bitmap("img/buttons/hp_on.bmp", NULL);
-    if (hp_train_on == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
     hp_train_off = load_bitmap("img/buttons/hp_off.bmp", NULL);
-    if (hp_train_off == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
+
 
     mp_train_off = load_bitmap("img/buttons/mp_off.bmp", NULL);
-    if (mp_train_off == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
     mp_train_on = load_bitmap("img/buttons/mp_on.bmp", NULL);
-    if (mp_train_on == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
 
     lp_train_off = load_bitmap("img/buttons/lp_off.bmp", NULL);
-    if (lp_train_off == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
     lp_train_on = load_bitmap("img/buttons/lp_on.bmp", NULL);
-    if (lp_train_on == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
 
     close_program_off = load_bitmap("img/buttons/exit_off.bmp", NULL);
-    if (close_program_off == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
     close_program_on = load_bitmap("img/buttons/exit_on.bmp", NULL);
-    if (close_program_on == NULL) {
-        printf("File not found\n");
-        exit(1);
-    }
   
     install_keyboard();
     install_mouse();
@@ -227,7 +102,6 @@ void initialize() {
     rectfill(background, 0, H-1, W-1, H-10, black);
 
     // struttra dei pulsanti
-
     button[0].button_off = random_train_off;
     button[0].button_on = random_train_on;
     button[0].state = false;
@@ -278,16 +152,19 @@ void initialize() {
     trail1_xPoints[1] = W/2-4*space;
     trail1_xPoints[2] = W/2+4*space;
     trail1_xPoints[3] = W/2+7*space;
+
     //binario 2
     trail2_xPoints[0] = W/2-5*space;
     trail2_xPoints[1] = W/2-3*space;
     trail2_xPoints[2] = W/2+3*space; 
     trail2_xPoints[3] = W/2+5*space;
+
     //binario 3
     trail3_xPoints[0] = W/2-3*space; 
     trail3_xPoints[1] = W/2-2*space; 
     trail3_xPoints[2] = W/2+2*space; 
     trail3_xPoints[3] = W/2+3*space;
+
     //binario 4 è W così non gira mai il bitmap
     trail4_xPoints[0] = W; 
     trail4_xPoints[1] = W; 
@@ -330,14 +207,11 @@ void initialize() {
     }
 
     for (i = 0; i<=11; i++){
-
         semaphores[i].queue = 0;
         semaphores[i].status = true;
         semaphores[i].sem = create_bitmap(sem_g->w, sem_g->h);
         blit(sem_g, semaphores[i].sem, 0, 0, 0, 0, sem_g->w, sem_g->h);
-        // pthread_mutex_unlock(&semaphores[i].mutex);
     }
-
 
     station_stop = W/2 + (train_w + stop_space) * 2;
     station_in   = station_stop - (train_w + stop_space) * MAX_TRAINS_IN_QUEUE;
@@ -356,14 +230,13 @@ void initialize() {
         station[i].move_queue = false;
     }
 
-
     // Disegno i vari binari
     y1 = 4*space;
     y2 = 5*space;
     line(background, 0, 4*space, W, 4*space, red);
     line(background, 0, 5*space, W, 5*space, red);
-    
     col = orange;
+
     for (i=0; i<3; i++) { 
         
         y0 = (i+1)*space;
@@ -379,11 +252,11 @@ void initialize() {
         line(background, x1, y3, x2, y3, col);                  // linea dritta down
         line(background, x0 + 50, y2 + 50, x1, y3, col);        // salita down
         line(background, x2, y3, x3 - 50, y2 + 50, col);        // discesa down
-
         line(background, x0, y1, x0 + space, y1, grey);
         line(background, x0, y2, x0 + space, y2, grey);
         line(background, x3, y1, x3 - space, y1, grey);
         line(background, x3, y2, x3 - space, y2, grey);
+
         if (col == orange) col = green;
         else col = blue;
     }

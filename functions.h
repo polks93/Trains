@@ -3,13 +3,32 @@
 
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_h
-#define TMAX                            100     // Numero massimo di treni
-#define track_pieces                    12      // Numero di scambi dei binari
-#define STATIONS_NUM                    8
-#define MAX_TRAINS_IN_QUEUE             2
-#define RAILWAYS_SWITCHES_SEMAPHORES    12
-#define MAX_WAGONS_PER_TRAIN            10
-#define N_BUTTONS                       10
+
+#define     TMAX                                100     // Numero massimo di treni
+#define     track_pieces                        12      // Numero di scambi dei binari
+#define     STATIONS_NUM                        8
+#define     MAX_TRAINS_IN_QUEUE                 2
+#define     RAILWAYS_SWITCHES_SEMAPHORES        12
+#define     MAX_WAGONS_PER_TRAIN                10
+#define     N_BUTTONS                           10
+#define     W                                   1280          //larghezza della finestra
+#define     H                                   630            //altezza delle finestra
+#define     INTERFACE_H                         90
+#define     INTERFACE_W                         1280
+#define     L_BUTTONS                           50
+#define     SPACE_BUTTONS                       20
+#define     H_window                            720
+#define     space                               H/9            //spazio tra un binario e l'altro
+#define     train_w                             20            //larghezza treno
+#define     train_h                             10             //altezza treno
+#define     sem_size_factor                     0.1
+#define     trail_w                             80
+#define     trail_h                             2
+#define     TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE     -32
+#define     TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE    0
+#define     TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE    -96
+#define     TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE   128
+#define     stop_space                          train_w
 
 enum train_states{
     GO_FAST  = 0, //0: -> fuori da stazione

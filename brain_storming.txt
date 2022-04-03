@@ -6,3 +6,4 @@ interfaccia grafica
 [V] colore treno in base al binario
 funzione a cui passare il numero dello scambio, che lo ruota
 if (treno deve andare nel binario x & lo scambio "i" è girato al binario y) ==> gira lo scambio "i" da x a y
+prova

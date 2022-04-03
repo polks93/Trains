@@ -36,26 +36,29 @@
 //----------------------------------------------------------------------
 
 void initialize() {
+    int x0, x1, x2, x3, y0, y1, y2, y3;
+    int i;
+    int col, black, red, blue, green, orange, white, grey;
+
     px2m = 100.0/W;
     prova = 0;
     EXIT = false;
     EXIT_COMMAND = false;
-    int x0, x1, x2, x3, y0, y1, y2, y3;
-    int i;
-    int col;
+
     allegro_init();
     set_color_depth(15);
-    int black   = makecol(0, 0, 0);
-    int red     = makecol(0, 0, 255);
-    int blue    = makecol(165, 165, 0);
-    int green   = makecol(0, 255, 0);
-    int orange  = makecol(0, 160, 255);
-    int white   = makecol (255, 255,255);
-    int grey    = makecol (50, 50, 50);
+    black   = makecol(0, 0, 0);
+    red     = makecol(0, 0, 255);
+    blue    = makecol(165, 165, 0);
+    green   = makecol(0, 255, 0);
+    orange  = makecol(0, 160, 255);
+    white   = makecol (255, 255,255);
+    grey    = makecol (50, 50, 50);
     ready_trains_num = 0;
     going_trains_num = 0;
     last_assigned_train_id = 0;
-    for (int i=0; i < STATIONS_NUM; i++){
+
+    for (i=0; i < STATIONS_NUM; i++){
         trains_in_binary[i]=0;
     }
     sem_g = load_bitmap("img/sem/sem_green.bmp", NULL);
@@ -74,7 +77,7 @@ void initialize() {
         exit(1);
     }
 
-    for (int i = 1; i<TMAX; i++) {
+    for (i = 1; i<TMAX; i++) {
         train_par[i].run = false;
     }
     // loading bitmaps of the different trains
@@ -266,7 +269,7 @@ void initialize() {
     button[4].y_min = SPACE_BUTTONS;
     button[4].y_max = SPACE_BUTTONS + L_BUTTONS;
 
-    for (int i = 0; i <= 4; i++) {
+    for (i = 0; i <= 4; i++) {
         blit(button[i].button_off, interface, 0, 0, button[i].x_min, button[i].y_min, L_BUTTONS, L_BUTTONS);
     }
 
@@ -298,7 +301,7 @@ void initialize() {
     trails_xPoints[3] = trail4_xPoints;
   
     //semaphores struct
-    for (int i = 0; i<=2; i++){
+    for (i = 0; i<=2; i++){
         semaphores[i].xPointStop    = W/2 + (2*i - 7)*space;
         semaphores[i].yPointStop    = H/2 - space/2;
         semaphores[i].trail_angle   = 0;
@@ -312,7 +315,7 @@ void initialize() {
         semaphores[i].xPointOut  = semaphores[i].xPointStop + (train_w + stop_space) * 2;
     }
 
-    for (int i = 3; i<=5; i++){
+    for (i = 3; i<=5; i++){
         semaphores[i].xPointStop = W/2 + (2*i - 3)*space;
         semaphores[i].yPointStop = H/2 - space/2;
         semaphores[i].trail_angle = 128;
@@ -326,7 +329,7 @@ void initialize() {
         semaphores[i].xPointOut  = semaphores[i].xPointStop + (train_w + stop_space) * 2;
     }
 
-    for (int i = 0; i<=11; i++){
+    for (i = 0; i<=11; i++){
 
         semaphores[i].queue = 0;
         semaphores[i].status = true;
@@ -341,7 +344,7 @@ void initialize() {
     station_out  = station_stop + (train_w + stop_space) * 2;
 
     //stazion struct
-    for (int i = 0; i<STATIONS_NUM; i++){
+    for (i = 0; i<STATIONS_NUM; i++){
         station[i].xPointStop = (W/2) + (train_w + stop_space);// * 2) - (train_w - stop_space);
         station[i].yPointStop = (i + 1) * space; 
         station[i].xPointIn   = station[i].xPointStop - (train_w + stop_space) * MAX_TRAINS_IN_QUEUE;
@@ -402,12 +405,13 @@ void initialize() {
 void    *user_task(void *p) {
     char scan;
     int id;
-    int i;
+    int i, j;
     int mbutton;
     int x;
     int y;
     int pressed_button;
-    i = 0;
+    
+    i = 1;
     id = get_task_id(p);
     set_activation(id);
 
@@ -425,23 +429,24 @@ void    *user_task(void *p) {
                 
                 switch (pressed_button) {
                 case 0:
-                    if (i == TMAX - 1) {
-                        ptask_exit(i);
-                        i = 0;
-                    }
-                    i ++;
+                    if (i == TMAX ) i = 1;
                     task_create(new_train, i, 20, 20, 255);
+                    i++;
                     break;
+                
                 case 1:
-                    ptask_exit(i);
                     break;
+                    
                 case 2:
                     break;
+                
                 case 3:
                     break;
+                
                 case 4:
                     EXIT_COMMAND = true;
                     break;
+                
                 default:
                     break;
                 }
@@ -451,16 +456,16 @@ void    *user_task(void *p) {
 
         }
         else {
-            for (int j = 0; j<= N_BUTTONS; j++) button[j].state = false;
+            for (j = 0; j<= N_BUTTONS; j++) button[j].state = false;
         }
         
         // PARTE 2: legge i comandi da tastiera
         scan = get_scancode();
         switch(scan) {
             case KEY_SPACE:
-                if (i == TMAX - 1 ) i = 0;
-                i++;
+                if (i == TMAX ) i = 1;
                 task_create(new_train, i, 20, 20, 255);
+                i++;
                 break;
             case KEY_ENTER:
                 printf("zero \n");
@@ -479,7 +484,6 @@ void    *user_task(void *p) {
 // individua il pulsante premuto
 //-------------------------------------------------------------------------------------------------------------------------
 int check_button(int x, int y){
-
     int i;
 
     for (i = 0; i < N_BUTTONS; i++) {
@@ -499,12 +503,19 @@ int check_button(int x, int y){
 void *graphics(void *p){
 
     int id;
+    int direction;
+    int sem_w;
+    int sem_h;
+    int i;
+    int j;
+    
     id = get_task_id(p);
     set_activation(id);
-    int direction = 0;
-    int sem_w = sem_r->w*sem_size_factor;
-    int sem_h = sem_r->h*sem_size_factor;
-    char stringa[80];
+
+    direction = 0;
+    sem_w = sem_r->w*sem_size_factor;
+    sem_h = sem_r->h*sem_size_factor;
+    
 
     while(EXIT == false) {
 
@@ -512,25 +523,25 @@ void *graphics(void *p){
         blit(interface, interface_buffer, 0, 0, 0, 0, interface->w, interface->h);
 
         // disegno i semafori degli scambi sul buffer
-        for (int i=0; i<=11; i++){
+        for (i=0; i<=11; i++){
             stretch_sprite(buffer, semaphores[i].sem, semaphores[i].xPointStop - sem_w/2, semaphores[i].yPointStop - sem_h, sem_w, sem_h);
         }
         
         // disegno i binari mobili sul buffer
-        for (int i = 0; i<=2; i++){
+        for (i = 0; i<=2; i++){
             pivot_sprite(buffer,trail, semaphores[i].xPointStop, semaphores[i].yPointStop - trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
             pivot_sprite(buffer,trail, semaphores[i+6].xPointStop, semaphores[i+6].yPointStop - trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
         }
-        for (int i = 3; i<=5; i++){
+        for (i = 3; i<=5; i++){
             pivot_sprite(buffer,trail, semaphores[i].xPointStop, semaphores[i].yPointStop + trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
             pivot_sprite(buffer,trail, semaphores[i+6].xPointStop, semaphores[i+6].yPointStop + trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
         }
         // disegno i semafori della stazione
-        for (int i=0; i<STATIONS_NUM; i++){
+        for (i=0; i<STATIONS_NUM; i++){
             stretch_sprite(buffer, sem_g, W/2, station[i].yPointStop - sem_h, sem_w, sem_h);
         }
         // disegna ogni treno attivo sul buffer, in base alla posizione associata al treno
-        for (int i = 1; i < TMAX; i++){
+        for (i = 1; i < TMAX; i++){
             if (train_par[i].run == true){
                 // draw_sprite(buffer, train_par[i].bmp, train_par[i].posx, train_par[i].posy);
                 for (int j = 0; j < train_par[i].wagonsNumber; j++){
@@ -543,7 +554,7 @@ void *graphics(void *p){
 
         // disegno l'interfaccia
 
-        for (int j = 0; j<N_BUTTONS ; j++) {
+        for (j = 0; j<N_BUTTONS ; j++) {
             if (button[j].state == true) {
                 blit(button[j].button_on, interface_buffer, 0, 0, button[j].x_min, button[j].y_min, L_BUTTONS, L_BUTTONS);
             }
@@ -568,7 +579,7 @@ void *graphics(void *p){
     destroy_bitmap(sem_g);
     destroy_bitmap(trail);
     destroy_bitmap(platform);
-        for (int i = 0; i <= 3; i ++) {
+        for (i = 0; i <= 3; i ++) {
         destroy_bitmap(train_bmp[i].train1);
         destroy_bitmap(train_bmp[i].train2);
         destroy_bitmap(train_bmp[i].train3);
@@ -580,17 +591,22 @@ void *graphics(void *p){
 /*-------------------------------------------------------------------------*/
 void *station_manager(void *p){
     int id;
+    int assigned_trains;
+    int i;
+    int s;
+    int bin;
+
     id = get_task_id(p);
     set_activation(id);
 
     while (EXIT == false){
 
         if(ready_trains_num > 0){
-            int assigned_trains=0;
-            for (int i = 0; i < ready_trains_num; i++){
+            assigned_trains=0;
+            for (i = 0; i < ready_trains_num; i++){
 
                 if(train_par[last_assigned_train_id + ready_trains_num - i].run == false) {
-                    int bin = 1 + rand()%4;
+                    bin = 1 + rand()%4;
                     if (trains_in_binary[bin-1] < MAX_TRAINS_IN_QUEUE + 1){
                     train_par[last_assigned_train_id + ready_trains_num - i].binary = bin;
                     assigned_trains++;
@@ -600,7 +616,7 @@ void *station_manager(void *p){
             last_assigned_train_id += assigned_trains;
         }
 
-        for (int i = 1; i < TMAX; i++){
+        for (i = 1; i < TMAX; i++){
 
             if (train_par[i].run == true){
                 if ((train_par[i].posx > station[train_par[i].binary-1].xPointIn) &&
@@ -635,7 +651,7 @@ void *station_manager(void *p){
             }
         }
 
-        for (int s = 0; s < STATIONS_NUM; s++) {
+        for (s = 0; s < STATIONS_NUM; s++) {
             if (station[s].queue >= 2) {
                 station[s].move_queue = true;
                 manage_queue(s);
@@ -656,12 +672,27 @@ void *station_manager(void *p){
 void *new_train(void *p) {
     int id;
     int binary_num;
+    int j;
+    int next_state, curr_state, prev_state, last_stop;
+
+    float vel;
+    float acc;
+    float refVel;
+    float accDistancePixel;
+    float accDistanceMeters;
+    float stopDistancePixel;
+    float stopDistanceMeters;
+
     bool run;
 
+    struct station_struct stationToCheck;
+
+
     id = get_task_id(p);
+    set_activation(id);
+
     ready_trains_num++;
     set_train_parameters(id);    
-    set_activation(id);
 
     while(train_par[id].binary == 0){
         printf("Train number %d is waiting for binary\n", id);
@@ -675,7 +706,7 @@ void *new_train(void *p) {
         train_par[id].wagonsNumber = 5;
     }
     
-    for (int j = 0; j < train_par[id].wagonsNumber; j++){
+    for (j = 0; j < train_par[id].wagonsNumber; j++){
         train_par[id].wagons[j].posx = 0 - (j*(train_w*1.1));
         train_par[id].wagons[j].posy = H/2 - space/2 - train_h/2;
         train_par[id].wagons[j].bmp = train_bmp[binary_num-1].train1;
@@ -686,17 +717,14 @@ void *new_train(void *p) {
     ready_trains_num--;
     going_trains_num++;
     trains_in_binary[train_par[id].binary-1]++;
-    int next_state, curr_state, prev_state, last_stop;
     
     curr_state = GO_FAST;
     prev_state = curr_state;
     next_state = curr_state;
     last_stop  = train_par[id].stopx;
 
-    struct station_struct stationToCheck;
     stationToCheck = station[binary_num - 1];
-    float vel;
-    float acc;
+
 
     while((train_par[id].posx < W) && (EXIT == false) ){
 
@@ -726,16 +754,15 @@ void *new_train(void *p) {
                 // step
                 vel = train_par[id].currentVel;
                 
-                float refVel;
                 if ((prev_state == STOP)||(train_par[id].posx >= stationToCheck.xPointStop)){
-                    float accDistancePixel = fabs(stationToCheck.xPointOut - stationToCheck.xPointStop);
-                    float accDistanceMeters = accDistancePixel*px2m;
+                    accDistancePixel = fabs(stationToCheck.xPointOut - stationToCheck.xPointStop);
+                    accDistanceMeters = accDistancePixel*px2m;
                     refVel = train_par[id].maxVel;
                     acc = (refVel*refVel)/(2*accDistanceMeters);
                 }
                 else if ((prev_state == GO_FAST)||(train_par[id].posx < stationToCheck.xPointStop)){
-                    float stopDistancePixel = fabs(stationToCheck.xPointStop - stationToCheck.xPointIn)*1.5;
-                    float stopDistanceMeters = stopDistancePixel*px2m;
+                    stopDistancePixel = fabs(stationToCheck.xPointStop - stationToCheck.xPointIn)*1.5;
+                    stopDistanceMeters = stopDistancePixel*px2m;
                     refVel = train_par[id].maxVel;
                     acc = -(refVel*refVel)/(2*stopDistanceMeters);
                 }                
@@ -838,13 +865,13 @@ void set_train_parameters(int i) {
 }
 /*-------------------------------------------------------------------------*/
 void manage_queue(int stationId){
-
+    int i;
     // se posso muovere la coda eseguo questo ciclo, altrimenti resto in attesa
     if (station[stationId].move_queue == true) {
         if (train_par[station[stationId].queue_list[0]].ready_to_go_flag == true){
             station[stationId].queue--;
             // definisco la nuova posizione di stop intermedia per tutti i treni in coda
-            for (int i=1; i<=station[stationId].queue; i++) {
+            for (i=1; i<=station[stationId].queue; i++) {
                 train_par[station[stationId].queue_list[i]].stopx += train_w + stop_space;
                 train_par[station[stationId].queue_list[i]].pos_in_queue--;
                 station[stationId].queue_list[i-1] = station[stationId].queue_list[i];
@@ -859,12 +886,20 @@ void manage_queue(int stationId){
 //-------------------------------------------------------------------------------------------------------------------------
 // void move(int i, int step){
 void move(int i, float vel, float acc){
+    
+    float newVel;
+    float deltaSpace;
+    float newStep;
+    int step;
+    int bin;
+    int j;
+
     /** Lo step minimo deve essere di 2 pixel, altrimenti nelle funzioni
      *  move_diag_up/move_diag_down che ne calcolano il seno e il coseno,
      *  si rischia di avere un incremento nullo.
      */
 
-    float newVel = vel + acc * 0.020;
+    newVel = vel + acc * 0.020;
 
     if (newVel > train_par[i].maxVel) {
         newVel = train_par[i].maxVel;
@@ -874,15 +909,15 @@ void move(int i, float vel, float acc){
     }
 
     train_par[i].currentVel = newVel;
-    float deltaSpace = newVel * 0.020;
-    float newStep = deltaSpace / px2m;
-    int step = (int)newStep;
+    deltaSpace = newVel * 0.020;
+    newStep = deltaSpace / px2m;
+    step = (int)newStep;
     // printf("start vel: %.3f, new vel: %.3f, acc: %.3f, delta space: %.3f, step: %d, factor: %.3f\n", 
     //                     vel,        newVel,       acc,  deltaSpace,    step, px2m);
 
-    int bin = train_par[i].binary; 
+    bin = train_par[i].binary; 
     
-    for (int j = 0; j < train_par[i].wagonsNumber; j++) {
+    for (j = 0; j < train_par[i].wagonsNumber; j++) {
 
         if ((train_par[i].wagons[j].posx > trails_xPoints[bin - 1][0] - train_w) && 
                 (train_par[i].wagons[j].posx <= trails_xPoints[bin - 1][1] - train_w)){
@@ -955,9 +990,9 @@ void stopAtStation(int i){
 }
 /*-------------------------------------------------------------------------*/
 void exit_all(){
-        
+    int i;
     EXIT = true;
-    for (int i = 0; i <= TMAX + 2; i++) {
+    for (i = 0; i <= TMAX + 2; i++) {
         pthread_join(tid[i],NULL);
     }
     allegro_exit(); 

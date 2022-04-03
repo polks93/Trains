@@ -32,8 +32,8 @@ void initialize() {
     blue    = makecol(165, 165, 0);
     green   = makecol(0, 255, 0);
     orange  = makecol(0, 160, 255);
-    white   = makecol (255, 255,255);
-    grey    = makecol (50, 50, 50);
+    white   = makecol(255, 255,255);
+    grey    = makecol(50, 50, 50);
     ready_trains_num = 0;
     going_trains_num = 0;
     last_assigned_train_id = 0;
@@ -76,10 +76,8 @@ void initialize() {
     random_train_on = load_bitmap("img/buttons/random_on.bmp", NULL);
     random_train_off = load_bitmap("img/buttons/random_off.bmp", NULL);
 
-
     hp_train_on = load_bitmap("img/buttons/hp_on.bmp", NULL);
     hp_train_off = load_bitmap("img/buttons/hp_off.bmp", NULL);
-
 
     mp_train_off = load_bitmap("img/buttons/mp_off.bmp", NULL);
     mp_train_on = load_bitmap("img/buttons/mp_on.bmp", NULL);
@@ -125,7 +123,6 @@ void initialize() {
     button[2].x_max = button[2].x_min + L_BUTTONS;
     button[2].y_min = SPACE_BUTTONS;
     button[2].y_max = SPACE_BUTTONS + L_BUTTONS;
-
 
     button[3].button_off = lp_train_off;
     button[3].button_on = lp_train_on;    
@@ -261,10 +258,7 @@ void initialize() {
         else col = blue;
     }
 
-    //tasks id
-    stationsManagerTaskId   = TMAX;
-    graphicTaskId           = TMAX + 1;
-    userTaskId              = TMAX + 2;
+    // creazione dei vari tasks
     task_create(graphics, graphicTaskId, 30, 30, 255);
     task_create(station_manager, stationsManagerTaskId, 50, 30, 255);
     task_create(user_task, userTaskId, 50, 50, 255);
@@ -296,11 +290,11 @@ void    *user_task(void *p) {
         if (mbutton) {
             x = mouse_x;
             y = mouse_y - H;
-
             pressed_button = check_button(x, y);
+
             if (button[pressed_button].state == false) {
-                
                 switch (pressed_button) {
+
                 case 0:
                     if (i == TMAX ) i = 1;
                     task_create(new_train, i, 20, 20, 255);
@@ -323,10 +317,8 @@ void    *user_task(void *p) {
                 default:
                     break;
                 }
-
                 button[pressed_button].state = true;
             }
-
         }
         else {
             for (j = 0; j<= N_BUTTONS; j++) button[j].state = false;
@@ -335,20 +327,23 @@ void    *user_task(void *p) {
         // PARTE 2: legge i comandi da tastiera
         scan = get_scancode();
         switch(scan) {
+
             case KEY_SPACE:
                 if (i == TMAX ) i = 1;
                 task_create(new_train, i, 20, 20, 255);
                 i++;
                 break;
+
             case KEY_ENTER:
                 printf("zero \n");
                 break;
+
             case KEY_ESC:
                 EXIT_COMMAND = true;
                 break;
+
             default:
                 break;
-
         }
     }
 }
@@ -361,9 +356,7 @@ int check_button(int x, int y){
 
     for (i = 0; i < N_BUTTONS; i++) {
         if (x < button[i].x_max && x > button[i].x_min &&
-                y < button[i].y_max && y > button[i].y_min) {
-                    break;
-                }
+                y < button[i].y_max && y > button[i].y_min) break;   
     }
     return i;
 }
@@ -426,7 +419,6 @@ void *graphics(void *p){
         }
 
         // disegno l'interfaccia
-
         for (j = 0; j<N_BUTTONS ; j++) {
             if (button[j].state == true) {
                 blit(button[j].button_on, interface_buffer, 0, 0, button[j].x_min, button[j].y_min, L_BUTTONS, L_BUTTONS);
@@ -435,14 +427,12 @@ void *graphics(void *p){
 
         blit(buffer, screen, 0, 0, 0, 0, background->w, background->h);
         blit(interface_buffer, screen, 0, 0, 0, H, interface->w, interface->h);
-
         show_mouse(screen);
 
         if (deadline_miss(id)) {
             printf("deadline miss of graphic task\n");
         }        
         wait_for_activation(id);
-
     }
 
     destroy_bitmap(buffer);
@@ -457,7 +447,6 @@ void *graphics(void *p){
         destroy_bitmap(train_bmp[i].train2);
         destroy_bitmap(train_bmp[i].train3);
     }
-
     printf("Closing graphics...\n");
     ptask_exit(id);
 }
@@ -547,7 +536,6 @@ void *new_train(void *p) {
     int binary_num;
     int j;
     int next_state, curr_state, prev_state, last_stop;
-
     float vel;
     float acc;
     float refVel;
@@ -555,11 +543,9 @@ void *new_train(void *p) {
     float accDistanceMeters;
     float stopDistancePixel;
     float stopDistanceMeters;
-
     bool run;
 
     struct station_struct stationToCheck;
-
 
     id = get_task_id(p);
     set_activation(id);
@@ -597,7 +583,6 @@ void *new_train(void *p) {
     last_stop  = train_par[id].stopx;
 
     stationToCheck = station[binary_num - 1];
-
 
     while((train_par[id].posx < W) && (EXIT == false) ){
 

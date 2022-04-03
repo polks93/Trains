@@ -5,6 +5,9 @@
 #define FUNCTIONS_h
 
 #define     TMAX                                100     // Numero massimo di treni
+#define     stationsManagerTaskId               TMAX
+#define     graphicTaskId                       TMAX + 1
+#define     userTaskId                          TMAX + 2
 #define     track_pieces                        12      // Numero di scambi dei binari
 #define     STATIONS_NUM                        8
 #define     MAX_TRAINS_IN_QUEUE                 2
@@ -106,10 +109,7 @@ int last_assigned_train_id;
 int station_stop;
 int station_in;
 int station_out;
-int stationsManagerTaskId;
 int semaphoresManagerTaskId;
-int graphicTaskId;
-int userTaskId;
 
 /** Bitmaps */
 BITMAP *background;

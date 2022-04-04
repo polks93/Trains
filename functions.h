@@ -152,6 +152,7 @@ int trail3_xPoints[4];
 int trail4_xPoints[4];  //probabilmente inutile perché il treno sul binario 4 non ha punti di snodo, vediamo
 int* trails_xPoints[4]; //vettore di puntatori a intero, contiene gli indirizzi di tutti i vettori sopra
 int trains_in_binary[STATIONS_NUM];
+
 /**
  * Initialization function.
  * 

@@ -38,17 +38,13 @@ void initialize() {
     going_trains_num = 0;
     last_assigned_train_id = 0;
 
-    for (i=0; i < STATIONS_NUM; i++){
-        trains_in_binary[i]=0;
-    }
+    for (i=0; i < STATIONS_NUM; i++) trains_in_binary[i]=0;
+    for (i = 1; i<TMAX; i++) train_par[i].run = false;
+    
     sem_g = load_bitmap("img/sem/sem_green.bmp", NULL);
     sem_r = load_bitmap("img/sem/sem_red.bmp", NULL);
-    sem_y = load_bitmap("img/sem/sem_yellow.bmp", NULL);
-
-    for (i = 1; i<TMAX; i++) train_par[i].run = false;
 
     // loading bitmaps of the different trains
-
     // orange binario 1
     train_bmp[0].train1 = load_bitmap("img/trains/orange.bmp", NULL);
     train_bmp[0].train2 = load_bitmap("img/trains/orange_diag.bmp", NULL);
@@ -278,9 +274,9 @@ void    *user_task(void *p) {
     int y;
     int pressed_button;
     
-    i = 1;
     id = get_task_id(p);
     set_activation(id);
+    i = 1;
 
     while(EXIT == false){
         
@@ -369,7 +365,6 @@ int check_button(int x, int y){
 void *graphics(void *p){
 
     int id;
-    int direction;
     int sem_w;
     int sem_h;
     int i;
@@ -378,11 +373,9 @@ void *graphics(void *p){
     id = get_task_id(p);
     set_activation(id);
 
-    direction = 0;
     sem_w = sem_r->w*sem_size_factor;
     sem_h = sem_r->h*sem_size_factor;
     
-
     while(EXIT == false) {
 
         blit(background, buffer, 0, 0, 0, 0, background->w, background->h);
@@ -770,9 +763,6 @@ void move(int i, float vel, float acc){
     deltaSpace = newVel * 0.020;
     newStep = deltaSpace / px2m;
     step = (int)newStep;
-    // printf("start vel: %.3f, new vel: %.3f, acc: %.3f, delta space: %.3f, step: %d, factor: %.3f\n", 
-    //                     vel,        newVel,       acc,  deltaSpace,    step, px2m);
-
     bin = train_par[i].binary; 
     
     for (j = 0; j < train_par[i].wagonsNumber; j++) {

@@ -39,7 +39,6 @@ void initialize() {
     last_assigned_train_id = 0;
 
     for (i=0; i < STATIONS_NUM; i++) trains_in_binary[i]=0;
-    for (i = 1; i<TMAX; i++) train_par[i].run = false;
     
     sem_g = load_bitmap("img/sem/sem_green.bmp", NULL);
     sem_r = load_bitmap("img/sem/sem_red.bmp", NULL);
@@ -174,35 +173,47 @@ void initialize() {
     for (i = 0; i<=2; i++){
         semaphores[i].xPointStop    = W/2 + (2*i - 7)*space;
         semaphores[i].yPointStop    = H/2 - space/2;
-        semaphores[i].trail_angle   = 0;
+        semaphores[i].xPointDraw = semaphores[i].xPointStop;
+        semaphores[i].yPointDraw = semaphores[i].yPointStop;
+        semaphores[i].trail_angle = TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE;
         semaphores[i].xPointIn   = semaphores[i].xPointStop - (train_w + stop_space) * MAX_TRAINS_IN_QUEUE;
         semaphores[i].xPointOut  = semaphores[i].xPointStop + (train_w + stop_space) * 2;
         
         semaphores[i+6].xPointStop  = W/2 + (2*i - 7)*space;
         semaphores[i+6].yPointStop  = H/2 + space/2;
-        semaphores[i+6].trail_angle = 0;
-        semaphores[i].xPointIn   = semaphores[i].xPointStop - (train_w + stop_space) * MAX_TRAINS_IN_QUEUE;
-        semaphores[i].xPointOut  = semaphores[i].xPointStop + (train_w + stop_space) * 2;
+        semaphores[i+6].xPointDraw = semaphores[i+6].xPointStop;
+        semaphores[i+6].yPointDraw = semaphores[i+6].yPointStop;
+        semaphores[i+6].trail_angle = TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE;
+        semaphores[i+6].xPointIn   = semaphores[i+6].xPointStop - (train_w + stop_space) * MAX_TRAINS_IN_QUEUE;
+        semaphores[i+6].xPointOut  = semaphores[i+6].xPointStop + (train_w + stop_space) * 2;
     }
 
     for (i = 3; i<=5; i++){
-        semaphores[i].xPointStop = W/2 + (2*i - 3)*space;
-        semaphores[i].yPointStop = H/2 - space/2;
-        semaphores[i].trail_angle = 128;
+        semaphores[i].xPointStop = W/2 +(i-1)*space;
+        semaphores[i].yPointStop = (6-i)*space;
+        semaphores[i].xPointDraw = W/2 + (2*i - 3)*space;
+        semaphores[i].yPointDraw = H/2 - space/2;
+        semaphores[i].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
         semaphores[i].xPointIn   = semaphores[i].xPointStop - (train_w + stop_space) * MAX_TRAINS_IN_QUEUE;
         semaphores[i].xPointOut  = semaphores[i].xPointStop + (train_w + stop_space) * 2;
         
-        semaphores[i+6].xPointStop = W/2 + (2*i - 3)*space;
-        semaphores[i+6].yPointStop = H/2 + space/2;
-        semaphores[i+6].trail_angle = 128;
-        semaphores[i].xPointIn   = semaphores[i].xPointStop - (train_w + stop_space) * MAX_TRAINS_IN_QUEUE;
-        semaphores[i].xPointOut  = semaphores[i].xPointStop + (train_w + stop_space) * 2;
+        semaphores[i+6].xPointStop = W/2 +(i-1)*space;
+        semaphores[i+6].yPointStop = (3+i)*space;
+        semaphores[i+6].xPointDraw = W/2 + (2*i - 3)*space;
+        semaphores[i+6].yPointDraw = H/2 + space/2;
+        semaphores[i+6].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
+        semaphores[i+6].xPointIn   = semaphores[i+6].xPointStop - (train_w + stop_space) * 2;//MAX_TRAINS_IN_QUEUE;
+        semaphores[i+6].xPointOut  = semaphores[i+6].xPointStop + (train_w + stop_space) * 2;
     }
 
     for (i = 0; i<=11; i++){
+
         semaphores[i].queue = 0;
         semaphores[i].status = true;
         semaphores[i].sem = create_bitmap(sem_g->w, sem_g->h);
+        semaphores[i].trail_state = TRAIL_OFF;
+        semaphores[i].trail_angle_cnt = 0;
+        semaphores[i].trail_angle_inc = 0.01;
         blit(sem_g, semaphores[i].sem, 0, 0, 0, 0, sem_g->w, sem_g->h);
     }
 
@@ -255,9 +266,9 @@ void initialize() {
     }
 
     // creazione dei vari tasks
-    task_create(graphics, graphicTaskId, 30, 30, 255);
-    task_create(station_manager, stationsManagerTaskId, 50, 30, 255);
-    task_create(user_task, userTaskId, 50, 50, 255);
+    task_create(graphics, graphicTaskId, 50, 50, 255);                  // 20 Hz
+    task_create(station_manager, stationsManagerTaskId, 25, 25, 255);   // 40 Hz
+    task_create(user_task, userTaskId, 100, 100, 255);                  // 10 Hz
 
     printf("Initialization completed!\n");
 }
@@ -293,7 +304,7 @@ void    *user_task(void *p) {
 
                 case 0:
                     if (i == TMAX ) i = 1;
-                    task_create(new_train, i, 20, 20, 255);
+                    task_create(new_train, i, 25, 25, 255); //40 Hz
                     i++;
                     break;
                 
@@ -326,7 +337,7 @@ void    *user_task(void *p) {
 
             case KEY_SPACE:
                 if (i == TMAX ) i = 1;
-                task_create(new_train, i, 20, 20, 255);
+                task_create(new_train, i, 25, 25, 255); //40 Hz
                 i++;
                 break;
 
@@ -365,6 +376,7 @@ int check_button(int x, int y){
 void *graphics(void *p){
 
     int id;
+    int direction;
     int sem_w;
     int sem_h;
     int i;
@@ -373,6 +385,7 @@ void *graphics(void *p){
     id = get_task_id(p);
     set_activation(id);
 
+    direction = 0;
     sem_w = sem_r->w*sem_size_factor;
     sem_h = sem_r->h*sem_size_factor;
     
@@ -383,22 +396,35 @@ void *graphics(void *p){
 
         // disegno i semafori degli scambi sul buffer
         for (i=0; i<=11; i++){
+            if (semaphores[i].status == false){
+                semaphores[i].sem = sem_r;
+            }
+            else{
+                semaphores[i].sem = sem_g;
+            }
             stretch_sprite(buffer, semaphores[i].sem, semaphores[i].xPointStop - sem_w/2, semaphores[i].yPointStop - sem_h, sem_w, sem_h);
         }
         
         // disegno i binari mobili sul buffer
         for (i = 0; i<=2; i++){
-            pivot_sprite(buffer,trail, semaphores[i].xPointStop, semaphores[i].yPointStop - trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
-            pivot_sprite(buffer,trail, semaphores[i+6].xPointStop, semaphores[i+6].yPointStop - trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i].xPointDraw, semaphores[i].yPointDraw - trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i+6].xPointDraw, semaphores[i+6].yPointDraw - trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
         }
         for (i = 3; i<=5; i++){
-            pivot_sprite(buffer,trail, semaphores[i].xPointStop, semaphores[i].yPointStop + trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
-            pivot_sprite(buffer,trail, semaphores[i+6].xPointStop, semaphores[i+6].yPointStop + trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i].xPointDraw, semaphores[i].yPointDraw + trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i+6].xPointDraw, semaphores[i+6].yPointDraw + trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
         }
         // disegno i semafori della stazione
         for (i=0; i<STATIONS_NUM; i++){
-            stretch_sprite(buffer, sem_g, W/2, station[i].yPointStop - sem_h, sem_w, sem_h);
+            if (station[i].status == false){
+                station[i].sem = sem_r;
+            }
+            else{
+                station[i].sem = sem_g;
+            }
+            stretch_sprite(buffer, station[i].sem, station[i].xPointStop - sem_w/2, station[i].yPointStop - sem_h, sem_w, sem_h);
         }
+
         // disegna ogni treno attivo sul buffer, in base alla posizione associata al treno
         for (i = 1; i < TMAX; i++){
             if (train_par[i].run == true){
@@ -474,45 +500,47 @@ void *station_manager(void *p){
         for (i = 1; i < TMAX; i++){
 
             if (train_par[i].run == true){
-                if ((train_par[i].posx > station[train_par[i].binary-1].xPointIn) &&
-                    (train_par[i].posx < station[train_par[i].binary-1].xPointStop)){
-
-                    if (train_par[i].station_flag == false){
-                        if (station[train_par[i].binary-1].status == true){
-                            station[train_par[i].binary-1].status = false;
-                        }
-                        train_par[i].station_flag = true;
-                        train_par[i].stopx = station[train_par[i].binary-1].xPointStop - (train_w + stop_space)*(station[train_par[i].binary-1].queue);
-                        train_par[i].pos_in_queue = station[train_par[i].binary-1].queue;
-                        station[train_par[i].binary-1].queue_list[station[train_par[i].binary-1].queue] = i;
-                        station[train_par[i].binary-1].queue++;
-                    }
-                }
-                if (train_par[i].binary != 4) {
-                    if(train_par[i].posx >= trails_xPoints[train_par[i].binary -1][0] - train_w) {
-                        semaphores[train_par[i].binary -1].trail_angle = TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE;
-                    }
-                     if(train_par[i].posx >= trails_xPoints[train_par[i].binary -1][0] + 2*space) {
-                        semaphores[train_par[i].binary -1].trail_angle = TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE;
-                    }
+               switch(train_par[i].binary){
+                case(1):
+                    // check and modify sem status
+                    checkSemaphoreIn(i, 0, TRAIL_ON);
+                    checkSemaphoreOut(i, 5, TRAIL_ON);
                     
-                    if(train_par[i].posx >= trails_xPoints[train_par[i].binary - 1][3] - 1.5*space) {
-                        semaphores[6 - train_par[i].binary].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE;
-                    }
-                    if(train_par[i].posx >= trails_xPoints[train_par[i].binary - 1][3] + 2*space) {
-                        semaphores[6 - train_par[i].binary].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
-                    }
+                    // check train into station
+                    checkStation(i);
+                    break;
+                case(2):
+                    // check and modify sem status
+                    checkSemaphoreIn(i, 0, TRAIL_OFF);
+                    checkSemaphoreIn(i, 1, TRAIL_ON);
+                    checkSemaphoreOut(i, 4, TRAIL_ON);
+                    checkSemaphoreOut(i, 5, TRAIL_OFF);
+                    // check train into station
+                    checkStation(i);
+                    break;
+                case(3):
+                    // check and modify sem status
+                    checkSemaphoreIn(i, 0, TRAIL_OFF);
+                    checkSemaphoreIn(i, 1, TRAIL_OFF);
+                    checkSemaphoreIn(i, 2, TRAIL_ON);
+                    checkSemaphoreOut(i, 3, TRAIL_ON);
+                    checkSemaphoreOut(i, 4, TRAIL_OFF);
+                    checkSemaphoreOut(i, 5, TRAIL_OFF);
+                    // check train into station
+                    checkStation(i);
+                    break;
+                case(4):
+                    // check and modify sem status
+                    checkSemaphoreIn(i, 0, TRAIL_OFF);
+                    checkSemaphoreIn(i, 1, TRAIL_OFF);
+                    checkSemaphoreIn(i, 2, TRAIL_OFF);
+                    checkSemaphoreOut(i, 3, TRAIL_OFF);
+                    checkSemaphoreOut(i, 4, TRAIL_OFF);
+                    checkSemaphoreOut(i, 5, TRAIL_OFF);
+                    // check train into station
+                    checkStation(i);
+                    break;
                 }
-            }
-        }
-
-        for (s = 0; s < STATIONS_NUM; s++) {
-            if (station[s].queue >= 2) {
-                station[s].move_queue = true;
-                manage_queue(s);
-                if (station[s].queue == 0) {
-                    // station[s].status = true;
-                }                
             }
         }
 
@@ -529,6 +557,9 @@ void *new_train(void *p) {
     int binary_num;
     int j;
     int next_state, curr_state, prev_state, last_stop;
+    int periodMs;
+    float periodS;
+    float vTarget;
     float vel;
     float acc;
     float refVel;
@@ -537,8 +568,8 @@ void *new_train(void *p) {
     float stopDistancePixel;
     float stopDistanceMeters;
     bool run;
-
-    struct station_struct stationToCheck;
+    periodMs = get_task_per(p);
+    periodS = (float)periodMs / 1000.0; 
 
     id = get_task_id(p);
     set_activation(id);
@@ -575,7 +606,7 @@ void *new_train(void *p) {
     next_state = curr_state;
     last_stop  = train_par[id].stopx;
 
-    stationToCheck = station[binary_num - 1];
+    train_par[id].stopToCheck =  &station[binary_num - 1];
 
     while((train_par[id].posx < W) && (EXIT == false) ){
 
@@ -583,6 +614,9 @@ void *new_train(void *p) {
             case(GO_FAST):
                 if(curr_state != prev_state){
                     printf("GO FAST\n");
+                    train_par[id].alreadyStopped = false;
+                    train_par[id].ready_to_go_flag = false;
+                    train_par[id].count = 0;
                 }
 
                 vel = train_par[id].currentVel;
@@ -590,8 +624,8 @@ void *new_train(void *p) {
                 move(id, vel, acc);
 
                 // check
-                if ((train_par[id].posx > stationToCheck.xPointIn) &&
-                    (train_par[id].posx < stationToCheck.xPointOut)){
+                if ((train_par[id].posx > train_par[id].stopToCheck->xPointIn) &&
+                    (train_par[id].posx < train_par[id].stopToCheck->xPointOut)){
                     next_state = GO_SLOW;
                 }
                 if (curr_state != next_state){
@@ -604,55 +638,47 @@ void *new_train(void *p) {
                 }
                 // step
                 vel = train_par[id].currentVel;
-                
-                if ((prev_state == STOP)||(train_par[id].posx >= stationToCheck.xPointStop)){
-                    accDistancePixel = fabs(stationToCheck.xPointOut - stationToCheck.xPointStop);
+                refVel = train_par[id].maxVel;
+                if (train_par[id].alreadyStopped == true){
+                    accDistancePixel = fabs(train_par[id].stopToCheck->xPointOut - train_par[id].stopToCheck->xPointStop);
                     accDistanceMeters = accDistancePixel*px2m;
-                    refVel = train_par[id].maxVel;
-                    acc = (refVel*refVel)/(2*accDistanceMeters);
+                    vTarget = refVel; //m/s
+                    acc = ((vTarget*vTarget) - (vel*vel)) / (2*stopDistanceMeters);
                 }
-                else if ((prev_state == GO_FAST)||(train_par[id].posx < stationToCheck.xPointStop)){
-                    stopDistancePixel = fabs(stationToCheck.xPointStop - stationToCheck.xPointIn)*1.5;
+                else{
+                    stopDistancePixel = fabs(train_par[id].stopToCheck->xPointStop - train_par[id].stopToCheck->xPointIn)*0.6;
                     stopDistanceMeters = stopDistancePixel*px2m;
-                    refVel = train_par[id].maxVel;
-                    acc = -(refVel*refVel)/(2*stopDistanceMeters);
+                        
+                    if (train_par[id].stopToCheck->status == false){
+                        acc = -(refVel*refVel)/(2*stopDistanceMeters);
+                    }
+                    else{
+                        vTarget = 5; //m/s
+                        acc = ((vTarget*vTarget) - (vel*vel)) / (2*stopDistanceMeters);
+                    }
                 }                
                 
                 move(id, vel, acc);
 
                 // check
                 if ((train_par[id].alreadyStopped == false)){
-                    if (train_par[id].stopx != 0){
-                        last_stop = train_par[id].stopx;
-                        if ((train_par[id].posx >= train_par[id].stopx)) {
-                            if (train_par[id].pos_in_queue == 0){
-                                next_state = STOP;  
-                            }
-                            else{
-                                next_state = WAIT;
-                            }
+                    if (train_par[id].currentVel < 1.0) {
+                        if(train_par[id].stopToCheck->status == false){
+                            next_state = STOP;  
+                        }
+                    }
+                    else{
+                        if (train_par[id].posx >= train_par[id].stopToCheck->xPointStop){
+                            train_par[id].alreadyStopped = true;    
                         }
                     }
                 }
-                if (train_par[id].posx > stationToCheck.xPointOut){
+
+                if (train_par[id].posx > train_par[id].stopToCheck->xPointOut){
                     next_state = GO_FAST;
                 }
-                if (curr_state != next_state){
-                }
-                break;
 
-            case(WAIT):
-                if(curr_state != prev_state){
-                    //on entry
-                }
-                // step
-                //do not move
-                // check
-                if (train_par[id].stopx != last_stop){
-                    next_state = GO_SLOW;  
-                }
                 if (curr_state != next_state){
-                    // on leave();
                 }
                 break;
 
@@ -744,13 +770,12 @@ void move(int i, float vel, float acc){
     int step;
     int bin;
     int j;
+    int periodMs;
+    float periodS;
 
-    /** Lo step minimo deve essere di 2 pixel, altrimenti nelle funzioni
-     *  move_diag_up/move_diag_down che ne calcolano il seno e il coseno,
-     *  si rischia di avere un incremento nullo.
-     */
-
-    newVel = vel + acc * 0.020;
+    periodMs = get_task_per(&tp[i]);
+    periodS = (float)periodMs / 1000.0; 
+    newVel = vel + acc * periodS;
 
     if (newVel > train_par[i].maxVel) {
         newVel = train_par[i].maxVel;
@@ -760,7 +785,7 @@ void move(int i, float vel, float acc){
     }
 
     train_par[i].currentVel = newVel;
-    deltaSpace = newVel * 0.020;
+    deltaSpace = newVel * periodS;
     newStep = deltaSpace / px2m;
     step = (int)newStep;
     bin = train_par[i].binary; 
@@ -791,6 +816,7 @@ void move(int i, float vel, float acc){
 }
 /*-------------------------------------------------------------------------*/
 void move_diag_up(int i, int j ,int bin, int inc){
+
     if (j == 0){
         // aggiorna la posizione di riferimento del treno come quella del primo vagone, 
         // così che continuino a funzionare tutti i check fatti nel codice
@@ -826,13 +852,89 @@ void move_forward(int i, int j, int bin, int inc) {
 /*-------------------------------------------------------------------------*/
 void stopAtStation(int i){ 
 
-    if (train_par[i].ready_to_go_flag == false) {
-        if (train_par[i].count == 100) {
-            train_par[i].ready_to_go_flag = true;
-            printf("Train %d is ready to go \n", i);
+    if (train_par[i].stopToCheck->status == true){
+        train_par[i].ready_to_go_flag = true;
+    }
+}
+/*-------------------------------------------------------------------------*/
+void checkSemaphoreIn(int trainId, int semId, int semStateRequired) {
+    
+    if ((semaphores[semId].trail_state != semStateRequired) && 
+        (train_par[trainId].posx <= semaphores[semId].xPointOut) &&
+        (train_par[trainId].posx >= semaphores[semId].xPointIn)){
+            semaphores[semId].status = false;
+            train_par[trainId].stopToCheck = &semaphores[semId];
+
+        if (semStateRequired == TRAIL_ON) {
+            semaphores[semId].trail_angle -= 1;
+            // printf("[TO ON]semaphores[semId].trail_angle_cnt %.3f\n", semaphores[semId].trail_angle_cnt);
+            // printf("[TO ON]semaphores[semId].trail_angle %d\n", semaphores[semId].trail_angle);
+            if (semaphores[semId].trail_angle == TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE){
+                semaphores[semId].trail_state = semStateRequired;
+                semaphores[semId].status = true;
+                semaphores[semId].trail_angle_cnt = 0;
+            }
+        }
+        if (semStateRequired == TRAIL_OFF){
+            semaphores[semId].trail_angle += 1;
+            // printf("[TO OFF]semaphores[semId].trail_angle_cnt %.3f\n", semaphores[semId].trail_angle_cnt);
+            // printf("[TO OFF]semaphores[semId].trail_angle %d\n", semaphores[semId].trail_angle);
+            if (semaphores[semId].trail_angle == TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE){
+                semaphores[semId].trail_state = semStateRequired;
+                semaphores[semId].status = true;
+                semaphores[semId].trail_angle_cnt = 0;
+            }
+        }
+    }
+}
+/*-------------------------------------------------------------------------*/
+void checkSemaphoreOut(int trainId, int semId, int semStateRequired) {
+    
+    if ((semaphores[semId].trail_state != semStateRequired) && 
+        (train_par[trainId].posx <= semaphores[semId].xPointOut) &&
+        (train_par[trainId].posx >= semaphores[semId].xPointIn)){
+            semaphores[semId].status = false;
+            train_par[trainId].stopToCheck = &semaphores[semId];
+
+        if (semStateRequired == TRAIL_ON) {
+            semaphores[semId].trail_angle +=1;
+            // printf("[TO ON]semaphores[semId].trail_angle_cnt %.3f\n", semaphores[semId].trail_angle_cnt);
+            // printf("[TO ON]semaphores[semId].trail_angle %d\n", semaphores[semId].trail_angle);
+            if (semaphores[semId].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE){
+                semaphores[semId].trail_state = semStateRequired;
+                semaphores[semId].status = true;
+                semaphores[semId].trail_angle_cnt = 0;
+            }
+        }
+        if (semStateRequired == TRAIL_OFF){
+            semaphores[semId].trail_angle -= 1;
+            // printf("[TO OFF]semaphores[semId].trail_angle_cnt %.3f\n", semaphores[semId].trail_angle_cnt);
+            // printf("[TO OFF]semaphores[semId].trail_angle %d\n", semaphores[semId].trail_angle);
+            if (semaphores[semId].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE){
+                semaphores[semId].trail_state = semStateRequired;
+                semaphores[semId].status = true;
+                semaphores[semId].trail_angle_cnt = 0;
+            }
+        }
+    }
+}
+/*-------------------------------------------------------------------------*/
+void checkStation(int trainId) {
+
+    if ((train_par[trainId].posx > station[train_par[trainId].binary-1].xPointIn) &&
+        (train_par[trainId].posx < station[train_par[trainId].binary-1].xPointOut)){
+        if (train_par[trainId].station_flag == false){
+            train_par[trainId].station_flag = true;
+            train_par[trainId].stopToCheck = &station[train_par[trainId].binary-1];
+            station[train_par[trainId].binary-1].status = false;
+        }
+        // temporanea logica di uscita dalla stazione
+        if (train_par[trainId].count == 100) {
+            train_par[trainId].count = 0;
+            station[train_par[trainId].binary-1].status = true;
         }
         else {
-            train_par[i].count += 1;
+            train_par[trainId].count += 1;
         }
     }
 }

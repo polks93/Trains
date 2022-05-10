@@ -40,6 +40,11 @@ enum train_states{
     STOP     = 3, //3: -> alla fermata
 };
 
+enum trail_states{
+    TRAIL_ON  = 1,
+    TRAIL_OFF = 0, 
+};
+
 struct train_bitmap {
     BITMAP  *train1;
     BITMAP  *train2;
@@ -60,12 +65,17 @@ struct button_struct {
 struct station_struct{
     bool            status;
     bool            move_queue;
+    int             xPointDraw;
+    int             yPointDraw; 
     int             xPointStop;
     int             yPointStop;
     int             xPointIn;
     int             xPointOut;
     int             queue;
+    int             trail_state;
     int             trail_angle;
+    float           trail_angle_cnt;
+    float           trail_angle_inc;
     int             queue_list[MAX_TRAINS_IN_QUEUE];
     BITMAP          *sem;
     pthread_mutex_t mutex;
@@ -95,6 +105,7 @@ struct train_parameters {
     int wagonsNumber;
     struct wagon_parameters wagons[MAX_WAGONS_PER_TRAIN];
     BITMAP *bmp;
+    struct station_struct *stopToCheck;
     pthread_mutex_t mutex;
 };
 
@@ -225,6 +236,21 @@ void move_forward(int i, int j, int bin, int inc);
  */
 void stopAtStation(int i);
 
+/**
+ * Check the semaphore semId state w.r.t the train trainId and
+    changes the switch position to reach the required state semStateRequired.
+ */
+void checkSemaphoreIn(int trainId, int semId, int semStateRequired);
+/**
+ * Check the semaphore OUT semId state w.r.t the train trainId and
+    changes the switch position to reach the required state semStateRequired.
+ */
+void checkSemaphoreOut(int trainId, int semId, int semStateRequired);
+
+/**
+ * Checks if the train is in the station of the binary it is moving on
+ */
+void checkStation (int trainId);
 /**
  * Stops al the running thread and exit.
  */

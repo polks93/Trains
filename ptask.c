@@ -51,6 +51,20 @@ int     get_task_id(void* p)
 }
 
 //------------------------------------------------------------------------------
+// FUNZIONE get_task_per
+//
+// Dato un puntatore a una struttura del tipo
+// task_par, restituisce una variabile intera
+// pari al periodo del task
+//------
+int     get_task_per(void* p)
+{
+	struct  task_par *tpar;
+	tpar = (struct task_par *)p;
+    return tpar->period;
+}
+
+//------------------------------------------------------------------------------
 // FUNZIONE time_add_ms
 //
 // Aggiunge un valore in ms alla struttura 

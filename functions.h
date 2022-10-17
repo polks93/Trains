@@ -12,7 +12,7 @@
 #define     STATIONS_NUM                        8
 #define     MAX_TRAINS_IN_QUEUE                 2
 #define     RAILWAYS_SWITCHES_SEMAPHORES        12
-#define     MAX_WAGONS_PER_TRAIN                10
+#define     WAGONS                              2
 #define     N_BUTTONS                           10
 #define     W                                   1280          //larghezza della finestra
 #define     H                                   630            //altezza delle finestra
@@ -34,10 +34,11 @@
 #define     stop_space                          train_w
 
 enum train_states{
-    GO_FAST  = 0, //0: -> fuori da stazione
-    GO_SLOW  = 1, //1: -> dentro stazione
-    WAIT     = 2, //2: -> attesa
-    STOP     = 3, //3: -> alla fermata
+    GO_FAST     = 0, //0: -> andatura normale
+    SLOW_DOWN   = 1, //1: -> dentro stazione
+    SPEED_UP    = 2, //2: -> fuori dalla stazione
+    WAIT        = 3, //3: -> attesa
+    STOP        = 4, //4: -> alla fermata
 };
 
 enum trail_states{
@@ -102,9 +103,8 @@ struct train_parameters {
     int count;
     int stopx;
     int pos_in_queue;
-    int wagonsNumber;
-    struct wagon_parameters wagons[MAX_WAGONS_PER_TRAIN];
-    BITMAP *bmp;
+    int binary_occupied;
+    struct wagon_parameters wagons[WAGONS];
     struct station_struct *stopToCheck;
     pthread_mutex_t mutex;
 };
@@ -219,27 +219,24 @@ void move(int i, float vel, float acc);
 /**
  * Moves the train along diagonal trail towards up.
  */
-void move_diag_up(int i, int j, int bin, int inc);
+void move_diag_up(int i, int j, int priority, int inc);
 
 /**
  * Moves the train along diagonal trail towards down.
  */
-void move_diag_down(int i, int j, int bin, int inc);
+void move_diag_down(int i, int j, int priority, int inc);
 
 /**
  * Move the train along straight trail.
  */
-void move_forward(int i, int j, int bin, int inc);
+void move_forward(int i, int j, int priority, int inc);
 
 /**
  * Stops the train at the station for a given time.
  */
 void stopAtStation(int i);
 
-/**
- * Check the semaphore semId state w.r.t the train trainId and
-    changes the switch position to reach the required state semStateRequired.
- */
+
 void checkSemaphoreIn(int trainId, int semId, int semStateRequired);
 /**
  * Check the semaphore OUT semId state w.r.t the train trainId and

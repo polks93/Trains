@@ -56,7 +56,7 @@ int     get_task_id(void* p)
 // Dato un puntatore a una struttura del tipo
 // task_par, restituisce una variabile intera
 // pari al periodo del task
-//------
+//------------------------------------------------------------------------------
 int     get_task_per(void* p)
 {
 	struct  task_par *tpar;

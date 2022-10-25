@@ -10,7 +10,8 @@
 #define     userTaskId                          TMAX + 2
 #define     track_pieces                        12      // Numero di scambi dei binari
 #define     STATIONS_NUM                        8
-#define     MAX_TRAINS_IN_QUEUE                 2
+#define     SEMAPHORES_NUM                      12
+#define     MAX_TRAINS_IN_QUEUE                 10       
 #define     RAILWAYS_SWITCHES_SEMAPHORES        12
 #define     WAGONS                              2
 #define     N_BUTTONS                           10
@@ -24,14 +25,20 @@
 #define     space                               H/9            //spazio tra un binario e l'altro
 #define     train_w                             20            //larghezza treno
 #define     train_h                             10             //altezza treno
+#define     wagons_space                        2
+#define     train_space                         (train_w + wagons_space)*WAGONS 
 #define     sem_size_factor                     0.1
 #define     trail_w                             80
 #define     trail_h                             2
 #define     TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE     -32
 #define     TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE    0
 #define     TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE    -96
-#define     TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE   128
+#define     TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE   -128
 #define     stop_space                          train_w
+#define     slow_down_space                     4*train_w
+#define     MAX_VEL                             15
+#define     MAX_ACC                             5
+#define     STOP_TIME                           1000            // Durata dei semafori rossi [ms]
 
 enum train_states{
     GO_FAST     = 0, //0: -> andatura normale
@@ -39,11 +46,17 @@ enum train_states{
     SPEED_UP    = 2, //2: -> fuori dalla stazione
     WAIT        = 3, //3: -> attesa
     STOP        = 4, //4: -> alla fermata
+    QUEUE       = 5  //5: -> in coda
 };
 
 enum trail_states{
     TRAIL_ON  = 1,
-    TRAIL_OFF = 0, 
+    TRAIL_OFF = 0 
+};
+
+enum type_of_stop{
+        SEMAPHORE   = 0,
+        STATION     = 1
 };
 
 struct train_bitmap {
@@ -66,18 +79,20 @@ struct button_struct {
 struct station_struct{
     bool            status;
     bool            move_queue;
-    int             xPointDraw;
+    int             xPointStop;                     // punto di frenata
+    int             xPointDraw;                     // punto in cui disegnare il semaforo
     int             yPointDraw; 
-    int             xPointStop;
-    int             yPointStop;
-    int             xPointIn;
-    int             xPointOut;
+    int             xPointIn;                       // punto in cui si comincia a rallentare
+    int             xPointOut;                      // punto di uscita dalla stazione
+    int             xPointTrail;                    // punto in cui disegnare il binario mobile
+    int             yPointTrail;
     int             queue;
     int             trail_state;
     int             trail_angle;
     float           trail_angle_cnt;
     float           trail_angle_inc;
     int             queue_list[MAX_TRAINS_IN_QUEUE];
+    struct          timespec    t;
     BITMAP          *sem;
     pthread_mutex_t mutex;
 };
@@ -91,8 +106,11 @@ struct wagon_parameters {
 struct train_parameters {
     bool run;
     bool ready_to_go_flag;
-    bool alreadyStopped;
-    bool station_flag;
+    bool semaphore_flag;
+    bool checked;
+    bool queue;
+    bool station_passed[STATIONS_NUM];
+    bool sem_passed[SEMAPHORES_NUM];
     int direction;
     int binary;
     int priority;
@@ -101,7 +119,9 @@ struct train_parameters {
     float currentVel;
     float maxVel;
     int count;
-    int stopx;
+    int stop_x;
+    int stop_type;
+    int stop_id;
     int pos_in_queue;
     int binary_occupied;
     struct wagon_parameters wagons[WAGONS];
@@ -109,14 +129,12 @@ struct train_parameters {
     pthread_mutex_t mutex;
 };
 
-/** Generic variables */
+// Variabili generiche
 bool EXIT;
 bool EXIT_COMMAND;
 int prova;
 float px2m;
 int ready_trains_num;
-int going_trains_num;
-int last_assigned_train_id;
 int station_stop;
 int station_in;
 int station_out;
@@ -195,6 +213,12 @@ void *graphics(void *p);
 void *station_manager(void *p);
 
 /**
+ * binary_assignement. 
+ * 
+ */
+void binary_assignment(int ready_trains_number);
+
+/**
  * Train task. 
  * It manages the train.
  */
@@ -230,11 +254,6 @@ void move_diag_down(int i, int j, int priority, int inc);
  * Move the train along straight trail.
  */
 void move_forward(int i, int j, int priority, int inc);
-
-/**
- * Stops the train at the station for a given time.
- */
-void stopAtStation(int i);
 
 
 void checkSemaphoreIn(int trainId, int semId, int semStateRequired);

@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "ptask.h": "c",
-        "functions.h": "c"
+        "functions.h": "c",
+        "cstdio": "c"
     }
 }

@@ -16,15 +16,27 @@
 //----------------------------------------------------------------------
 
 void initialize() {
-    int x0, x1, x2, x3, y0, y1, y2, y3;
+    
     int i;
+    int x0, x1, x2, x3, y0, y1, y2, y3;
     int col, black, red, blue, green, orange, white, grey;
+    int trail_diag;
+
+    printf("Loading ... \n");
+    // INIT MUTEX
+    pthread_mutex_t     ready_trains_num_mutex          = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t     last_assigned_train_id_mutex    = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t     trains_in_binary_mutex          = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t     station_mutex                   = PTHREAD_MUTEX_INITIALIZER;
 
     // INIZIALIZZAZIONE VARIABILI GLOBALI
-    px2m = 100.0/W;
-    EXIT = false;
-    EXIT_COMMAND = false;
-    ready_trains_num = 0;
+    EXIT                    = false;
+    EXIT_COMMAND            = false;
+    ready_trains_num        = 0;
+    last_assigned_train_id  = 0;
+    for (i = 0; i < STATIONS_NUM; i++)      trains_in_binary[i] = 0;
+    for (i = 0; i < STATIONS_NUM; i++)      station[i].mutex    = station_mutex;
+    for (i = 0; i < SEMAPHORES_NUM; i++)    semaphores[i].mutex = station_mutex;
 
     // INIZIALIZZAZIONE ALLEGRO
     allegro_init();
@@ -39,8 +51,6 @@ void initialize() {
     white   = makecol(255, 255,255);
     grey    = makecol(50, 50, 50);
 
-    for (i=0; i < STATIONS_NUM; i++) trains_in_binary[i]=0;
-    
     // BITMAPS DEI BINARI
     sem_g = load_bitmap("img/sem/sem_green.bmp", NULL);
     sem_r = load_bitmap("img/sem/sem_red.bmp", NULL);
@@ -84,9 +94,9 @@ void initialize() {
 
     close_program_off = load_bitmap("img/buttons/exit_off.bmp", NULL);
     close_program_on = load_bitmap("img/buttons/exit_on.bmp", NULL);
-  
+    
     // INIZIALIZZAZIONE GRAFICA
-    set_gfx_mode(GFX_AUTODETECT_WINDOWED, W, H_window, 0, 0);
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, W, WINDOW_H, 0, 0);
     background = create_bitmap(W, H);
     buffer = create_bitmap(W, H);
     interface = create_bitmap(INTERFACE_W, INTERFACE_H);
@@ -142,28 +152,26 @@ void initialize() {
     button[4].y_max = SPACE_BUTTONS + L_BUTTONS;
 
     // Disegno i pulsanti sul buffer
-    for (i = 0; i <= 4; i++) {
-        blit(button[i].button_off, interface, 0, 0, button[i].x_min, button[i].y_min, L_BUTTONS, L_BUTTONS);
-    }
+    for (i = 0; i <= 4; i++)        blit(button[i].button_off, interface, 0, 0, button[i].x_min, button[i].y_min, L_BUTTONS, L_BUTTONS);
 
     // POSIZIONE DELLE INTERSEZIONI TRA I BINARI
     // binario 1
-    trail1_xPoints[0] = W/2-7*space;
-    trail1_xPoints[1] = W/2-4*space;
-    trail1_xPoints[2] = W/2+4*space;
-    trail1_xPoints[3] = W/2+7*space;
+    trail1_xPoints[0] = W/2 - 7*SPACE;
+    trail1_xPoints[1] = W/2 - 4*SPACE;
+    trail1_xPoints[2] = W/2 + 4*SPACE;
+    trail1_xPoints[3] = W/2 + 7*SPACE;
 
     // binario 2
-    trail2_xPoints[0] = W/2-5*space;
-    trail2_xPoints[1] = W/2-3*space;
-    trail2_xPoints[2] = W/2+3*space; 
-    trail2_xPoints[3] = W/2+5*space;
+    trail2_xPoints[0] = W/2 - 5*SPACE;
+    trail2_xPoints[1] = W/2 - 3*SPACE;
+    trail2_xPoints[2] = W/2 + 3*SPACE; 
+    trail2_xPoints[3] = W/2 + 5*SPACE;
 
     // binario 3
-    trail3_xPoints[0] = W/2-3*space; 
-    trail3_xPoints[1] = W/2-2*space; 
-    trail3_xPoints[2] = W/2+2*space; 
-    trail3_xPoints[3] = W/2+3*space;
+    trail3_xPoints[0] = W/2 - 3*SPACE; 
+    trail3_xPoints[1] = W/2 - 2*SPACE; 
+    trail3_xPoints[2] = W/2 + 2*SPACE; 
+    trail3_xPoints[3] = W/2 + 3*SPACE;
 
     // binario 4 
     trail4_xPoints[0] = W; 
@@ -176,50 +184,49 @@ void initialize() {
     trails_xPoints[1] = trail2_xPoints; 
     trails_xPoints[2] = trail3_xPoints; 
     trails_xPoints[3] = trail4_xPoints;
-  
+    
     // STRUTTURA SEMAFORI
     for (i = 0; i<=2; i++){
-        semaphores[i].xPointStop    = W/2 + (2*i - 7)*space;
-        semaphores[i].xPointDraw    = semaphores[i].xPointStop;
-        semaphores[i].yPointDraw    = H/2 - space/2;
-        semaphores[i].xPointTrail   = semaphores[i].xPointStop;
+        semaphores[i].xPointStop    = W/2 + (2*i - 7)*SPACE - (TRAIN_W + 5);
+        semaphores[i].xPointDraw    = semaphores[i].xPointStop + (TRAIN_W + 5);
+        semaphores[i].yPointDraw    = H/2 - SPACE/2;
+        semaphores[i].xPointTrail   = semaphores[i].xPointDraw;
         semaphores[i].yPointTrail   = semaphores[i].yPointDraw;
         semaphores[i].trail_angle   = TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE;
-        semaphores[i].xPointIn      = semaphores[i].xPointStop - slow_down_space;
-        semaphores[i].xPointOut     = semaphores[i].xPointStop + slow_down_space;
+        semaphores[i].xPointIn      = semaphores[i].xPointStop - SLOW_DOWN_SPACE;
+        semaphores[i].xPointOut     = semaphores[i].xPointDraw + TRAIL_W;
         
-        semaphores[i+6].xPointStop  = W/2 + (2*i - 7)*space;
-        semaphores[i+6].xPointDraw  = W/2 - (i+2)*space;
-        semaphores[i+6].yPointDraw  = (6+i)*space;
-        semaphores[i+6].xPointTrail = semaphores[i+6].xPointStop;
-        semaphores[i+6].yPointTrail = H/2 + space/2;
+        semaphores[i+6].xPointStop  = W/2 + (i - 4)*SPACE + (TRAIN_W + 5);
+        semaphores[i+6].xPointDraw  = W/2 - (i+2)*SPACE;
+        semaphores[i+6].yPointDraw  = (6+i)*SPACE;
+        semaphores[i+6].xPointTrail = W/2 + (2*i - 7)*SPACE;
+        semaphores[i+6].yPointTrail = H/2 + SPACE/2;
         semaphores[i+6].trail_angle = TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE;
-        semaphores[i+6].xPointIn    = semaphores[i+6].xPointStop - slow_down_space;
-        semaphores[i+6].xPointOut   = semaphores[i+6].xPointStop + slow_down_space;
+        semaphores[i+6].xPointIn    = semaphores[i+6].xPointStop + SLOW_DOWN_SPACE;
+        semaphores[i+6].xPointOut   = trails_xPoints[0][0];
     }
 
     for (i = 3; i<=5; i++){
-        semaphores[i].xPointStop    = W/2 +(i-1)*space;
-        semaphores[i].xPointDraw    = semaphores[i].xPointStop;
-        semaphores[i].yPointDraw    = (6-i)*space;
-        semaphores[i].xPointTrail   = W/2 + (2*i - 3)*space; 
-        semaphores[i].yPointTrail   = H/2 - space/2;
+        semaphores[i].xPointStop    = W/2 +(i-1)*SPACE - (TRAIN_W + 5);
+        semaphores[i].xPointDraw    = semaphores[i].xPointStop + (TRAIN_W + 5);
+        semaphores[i].yPointDraw    = (6-i)*SPACE;
+        semaphores[i].xPointTrail   = W/2 + (2*i - 3)*SPACE; 
+        semaphores[i].yPointTrail   = H/2 - SPACE/2;
         semaphores[i].trail_angle   = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
-        semaphores[i].xPointIn      = semaphores[i].xPointStop - slow_down_space;
-        semaphores[i].xPointOut     = semaphores[i].xPointStop + slow_down_space;
+        semaphores[i].xPointIn      = semaphores[i].xPointStop - SLOW_DOWN_SPACE;
+        semaphores[i].xPointOut     = trails_xPoints[0][3];
            
-        semaphores[i+6].xPointStop  = W/2 + (2*i - 3)*space;
-        semaphores[i+6].xPointDraw  = semaphores[i+6].xPointStop;
-        semaphores[i+6].yPointDraw  = H/2 + space/2;
-        semaphores[i+6].xPointTrail = semaphores[i+6].xPointStop;
+        semaphores[i+6].xPointStop  = W/2 + (2*i - 3)*SPACE + (TRAIN_W + 5);
+        semaphores[i+6].xPointDraw  = semaphores[i+6].xPointStop - (TRAIN_W + 5);
+        semaphores[i+6].yPointDraw  = H/2 + SPACE/2;
+        semaphores[i+6].xPointTrail = semaphores[i+6].xPointDraw;
         semaphores[i+6].yPointTrail = semaphores[i+6].yPointDraw;
         semaphores[i+6].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
-        semaphores[i+6].xPointIn    = semaphores[i+6].xPointStop - slow_down_space;
-        semaphores[i+6].xPointOut   = semaphores[i+6].xPointStop + slow_down_space;
+        semaphores[i+6].xPointIn    = semaphores[i+6].xPointStop + SLOW_DOWN_SPACE;
+        semaphores[i+6].xPointOut   = semaphores[i+6].xPointDraw - TRAIL_W;
     }
 
-    for (i = 0; i<=11; i++){
-
+    for (i = 0; i < SEMAPHORES_NUM; i++){
         semaphores[i].queue             = 0;
         semaphores[i].status            = true;
         semaphores[i].sem               = create_bitmap(sem_g->w, sem_g->h);
@@ -231,65 +238,64 @@ void initialize() {
     }
 
     // STRUTTURA STAZIONE
-    for (i = 0; i<4; i++){
+    for (i = 0; i < STATIONS_NUM/2; i++){
         station[i].xPointStop = (W/2);
-        station[i].xPointDraw = station[i].xPointStop + 1.5*stop_space;
-        station[i].yPointDraw = (i + 1) * space;
-        station[i].xPointIn   = station[i].xPointStop - slow_down_space;
-        station[i].xPointOut  = station[i].xPointStop + slow_down_space;
+        station[i].xPointDraw = station[i].xPointStop + (TRAIN_W + 5);
+        station[i].yPointDraw = (i + 1) * SPACE;
+        station[i].xPointIn   = station[i].xPointStop - SLOW_DOWN_SPACE;
+        station[i].xPointOut  = station[i].xPointDraw + TRAIN_W;
         station[i].status     = true;
         station[i].queue      = 0; 
         station[i].sem        = create_bitmap(sem_g->w, sem_g->h);
         station[i].move_queue = false;
         blit(sem_g, station[i].sem, 0, 0, 0, 0, sem_g->w, sem_g->h);
     }
-        for (i = 4; i<8; i++){
+        for (i = STATIONS_NUM/2; i < STATIONS_NUM; i++){
         station[i].xPointStop = (W/2);
-        station[i].xPointDraw = station[i].xPointStop - 1.5*stop_space;
-        station[i].yPointDraw = (i + 1) * space;
-        station[i].xPointIn   = station[i].xPointStop + slow_down_space;
-        station[i].xPointOut  = station[i].xPointStop - slow_down_space;
+        station[i].xPointDraw = station[i].xPointStop - 1.5*STOP_SPACE;
+        station[i].yPointDraw = (i + 1) * SPACE;
+        station[i].xPointIn   = station[i].xPointStop + SLOW_DOWN_SPACE;
+        station[i].xPointOut  = station[i].xPointDraw - TRAIN_W;
         station[i].status     = true;
         station[i].queue      = 0; 
         station[i].sem        = create_bitmap(sem_g->w, sem_g->h);
         station[i].move_queue = false;
         blit(sem_g, station[i].sem, 0, 0, 0, 0, sem_g->w, sem_g->h);
     }
-
 
     // DISEGNO I BINARI
-    y1 = 4*space;
-    y2 = 5*space;
-    line(background, 0, 4*space, W, 4*space, red);
-    line(background, 0, 5*space, W, 5*space, red);
+    y1 = 4*SPACE;
+    y2 = 5*SPACE;
+    line(background, 0, 4*SPACE, W, 4*SPACE, red);
+    line(background, 0, 5*SPACE, W, 5*SPACE, red);
+    trail_diag = (int) TRAIL_W*sqrt(2)/2;
 
-    for (i=0; i<3; i++) { 
-        
-        y0 = (i+1)*space;
-        y3 = (8-i)*space;
+    for (i = 0; i < 3; i++) { 
+        y0 = (i+1)*SPACE;
+        y3 = (8-i)*SPACE;
         x0 = trails_xPoints[i][0];
         x1 = trails_xPoints[i][1];
         x2 = trails_xPoints[i][2];
         x3 = trails_xPoints[i][3];
-
         line(background, x1, y0, x2, y0, red);                  
-        line(background, x0 + 50, y1 - 50, x1, y0, red);        
-        line(background, x2, y0, x3 - 50, y1 - 50, red);        
+        line(background, x0 + trail_diag, y1 - trail_diag, x1, y0, red);        
+        line(background, x2, y0, x3 - trail_diag, y1 - trail_diag, red);        
         line(background, x1, y3, x2, y3, red);                  
-        line(background, x0 + 50, y2 + 50, x1, y3, red);        
-        line(background, x2, y3, x3 - 50, y2 + 50, red);        
-        line(background, x0, y1, x0 + space, y1, grey);
-        line(background, x0, y2, x0 + space, y2, grey);
-        line(background, x3, y1, x3 - space, y1, grey);
-        line(background, x3, y2, x3 - space, y2, grey);
+        line(background, x0 + trail_diag, y2 + trail_diag, x1, y3, red);        
+        line(background, x2, y3, x3 - trail_diag, y2 + trail_diag, red);        
+        line(background, x0, y1, x0 + TRAIL_W, y1, grey);
+        line(background, x0, y2, x0 + TRAIL_W, y2, grey);
+        line(background, x3, y1, x3 - TRAIL_W, y1, grey);
+        line(background, x3, y2, x3 - TRAIL_W, y2, grey);
     }
-
+    
     // CREAZIONE TASK
-    task_create(graphics, graphicTaskId, 50, 50, 255);                  // 20 Hz
-    task_create(station_manager, stationsManagerTaskId, 25, 25, 255);   // 40 Hz
-    task_create(user_task, userTaskId, 100, 100, 255);                  // 10 Hz
+    task_create(graphics,           GRAPHIC_TASK_ID,            GRAPHIC_TASK_PERIOD,            GRAPHIC_TASK_DL,            GRAPHIC_TASK_PRIO);               
+    task_create(station_manager,    STATION_MANAGER_TASK_ID,    STATION_MANAGER_TASK_PERIOD,    STATION_MANAGER_TASK_DL,    STATION_MANAGER_TASK_PRIO);   
+    task_create(user_task,          USER_TASK_ID,               USER_TASK_PERIOD,               USER_TASK_DL,               USER_TASK_PRIO);                  
 
     printf("Initialization completed!\n");
+    printf("Press SPACE to create a new random train \n");
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
@@ -325,27 +331,27 @@ void    *user_task(void *p) {
 
                 case 0:
                     if (i == TMAX ) i = 1;
-                    task_create(new_train, i, 25, 25, 255); //40 Hz
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
                     i++;
                     break;
                 
                 case 1:
                     if (i == TMAX ) i = 1;
-                    task_create(new_train, i, 25, 25, 255); //40 Hz
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
                     train_par[i].priority = 3;
                     i++;
                     break;
                     
                 case 2:
                     if (i == TMAX ) i = 1;
-                    task_create(new_train, i, 25, 25, 255); //40 Hz
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
                     train_par[i].priority = 2;
                     i++;
                     break;
                 
                 case 3:
                     if (i == TMAX ) i = 1;
-                    task_create(new_train, i, 25, 25, 255); //40 Hz
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
                     train_par[i].priority = 1;
                     i++;
                     break;
@@ -360,9 +366,7 @@ void    *user_task(void *p) {
                 button[pressed_button].state = true;
             }
         }
-        else {
-            for (j = 0; j<= N_BUTTONS; j++) button[j].state = false;
-        }
+        else    for (j = 0; j<= N_BUTTONS; j++) button[j].state = false;
         
         // PARTE 2: legge i comandi da tastiera
         scan = get_scancode();
@@ -370,7 +374,7 @@ void    *user_task(void *p) {
 
             case KEY_SPACE:
                 if (i == TMAX ) i = 1;
-                task_create(new_train, i, 25, 25, 255); //40 Hz
+                task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
                 i++;
                 break;
 
@@ -398,7 +402,7 @@ int check_button(int x, int y){
 
     for (i = 0; i < N_BUTTONS; i++) {
         if (x < button[i].x_max && x > button[i].x_min &&
-                y < button[i].y_max && y > button[i].y_min) break;   
+            y < button[i].y_max && y > button[i].y_min)         break;   
     }
     return i;
 }
@@ -424,8 +428,8 @@ void *graphics(void *p){
     id = get_task_id(p);
     set_activation(id);
 
-    sem_w = sem_r->w*sem_size_factor;
-    sem_h = sem_r->h*sem_size_factor;
+    sem_w = sem_r->w*SEM_SIZE_FACTOR ;
+    sem_h = sem_r->h*SEM_SIZE_FACTOR ;
     
     while(EXIT == false) {
 
@@ -451,16 +455,15 @@ void *graphics(void *p){
             sprintf(station_number,"%d",i);
             textout_ex(buffer, font, station_number, station[i].xPointDraw, station[i].yPointDraw + 10, (0,0,0), -1);
         }
-        
 
         // BINARI MOBILI
         for (i = 0; i <= 2; i++){
-            pivot_sprite(buffer,trail, semaphores[i].xPointTrail, semaphores[i].yPointTrail - trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
-            pivot_sprite(buffer,trail, semaphores[i+6].xPointTrail, semaphores[i+6].yPointTrail - trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i].xPointTrail, semaphores[i].yPointTrail - TRAIL_H/2, 0, 0, itofix(semaphores[i].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i+6].xPointTrail, semaphores[i+6].yPointTrail - TRAIL_H/2, 0, 0, itofix(semaphores[i+6].trail_angle));
         }
         for (i = 3; i <= 5; i++){
-            pivot_sprite(buffer,trail, semaphores[i].xPointTrail, semaphores[i].yPointTrail + trail_h/2, 0, 0, itofix(semaphores[i].trail_angle));
-            pivot_sprite(buffer,trail, semaphores[i+6].xPointTrail, semaphores[i+6].yPointTrail + trail_h/2, 0, 0, itofix(semaphores[i+6].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i].xPointTrail, semaphores[i].yPointTrail + TRAIL_H/2, 0, 0, itofix(semaphores[i].trail_angle));
+            pivot_sprite(buffer,trail, semaphores[i+6].xPointTrail, semaphores[i+6].yPointTrail + TRAIL_H/2, 0, 0, itofix(semaphores[i+6].trail_angle));
         }
 
         // TRENI
@@ -478,16 +481,24 @@ void *graphics(void *p){
         }
 
         // DEBUG GRAFICO
-        sprintf(str, "Queue in binary 4 is: %d", trains_in_binary[4]);
-        textout_ex(interface_buffer, font, str,400, 30,(0,0,0),-1);
-        sprintf(str, "Queue in binary 3 is: %d", trains_in_binary[3]);
-        textout_ex(interface_buffer, font, str,400, 40,(0,0,0),-1);
-        sprintf(str, "Queue in binary 2 is: %d", trains_in_binary[2]);
-        textout_ex(interface_buffer, font, str,400, 50,(0,0,0),-1);
-        sprintf(str, "Queue in binary 1 is: %d", trains_in_binary[1]);
-        textout_ex(interface_buffer, font, str,400, 60,(0,0,0),-1);
-        sprintf(queue_list, "Queue station 3: %d", station[3].queue);
-        textout_ex(interface_buffer, font, queue_list ,400, 70,(0,0,0),-1);
+        sprintf(str, "Queue: %d", trains_in_binary[0]);
+        textout_ex(buffer, font, str, 550, 1.2*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d", trains_in_binary[1]);
+        textout_ex(buffer, font, str, 550, 2.2*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d", trains_in_binary[2]);
+        textout_ex(buffer, font, str, 550, 3.2*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d", trains_in_binary[3]);
+        textout_ex(buffer, font, str, 550, 4.2*SPACE, (0,0,0),-1);
+        sprintf(str, "ready trains number %d", ready_trains_num);
+        textout_ex(interface_buffer, font, str, 400, 20, (0,0,0), -1);
+
+        // int k = 4;
+        // line(buffer, station[k].xPointIn, 0, station[k].xPointIn, H, (0,0,0));
+        // line(buffer, station[k+1].xPointIn, 0, station[k+1].xPointIn, H, (0,0,0));
+        // line(buffer, station[k+2].xPointIn, 0, station[k+2].xPointIn, H, (0,0,0));
+        // line(buffer, station[k+3].xPointIn, 0, station[k+3].xPointIn, H, (0,0,0));
+
+
 
         // DISEGNO IL BUFFER SULLO SCHERMO
         blit(buffer, screen, 0, 0, 0, 0, background->w, background->h);
@@ -521,10 +532,10 @@ void *graphics(void *p){
 // Assegna i binari ai nuovi treni, gestisce semafori e incroci
 //-------------------------------------------------------------------------------------------------------------------------
 void *station_manager(void *p){
-    int id;
-    int i;
-    int j;
-    struct timespec now;
+    int     id;
+    int     i;
+    int     j;
+    struct  timespec now;
 
     id = get_task_id(p);
     set_activation(id);
@@ -532,7 +543,7 @@ void *station_manager(void *p){
     while (EXIT == false){
         
         // ASSEGNAZIONE BINARI
-        //binary_assignment(ready_trains_num);
+        binary_assignment();
 
         // GESTIONE TRENI
         // Controlla la prossima fermata di ogni treno in base al binario
@@ -543,17 +554,17 @@ void *station_manager(void *p){
                 train_par[i].checked = false;
 
                 switch(train_par[i].binary){
-                case(1):
+                case(0):
 
                     // check semaforo
                     checkSemaphoreIn(i, 0, TRAIL_ON);
                     // check stazione
                     checkStation(i);
                     // check semaforo
-                    checkSemaphoreOut(i, 5, TRAIL_ON);
+                    //checkSemaphoreOut(i, 5, TRAIL_ON);
 
                     break;
-                case(2):
+                case(1):
 
                     // check semaforo
                     checkSemaphoreIn(i, 0, TRAIL_OFF);
@@ -561,24 +572,24 @@ void *station_manager(void *p){
                     // check stazione
                     checkStation(i);
                     // check semaforo
-                    checkSemaphoreOut(i, 4, TRAIL_ON); // il semaforo 4 in realtà dovrebbe controllare da solo anche il 5....
+                    //checkSemaphoreOut(i, 4, TRAIL_ON); // il semaforo 4 in realtà dovrebbe controllare da solo anche il 5....
 
+                    break;
+                case(2):
+                    // check semaforo
+                    //checkSemaphoreIn(i, 0, TRAIL_OFF);
+                    //checkSemaphoreIn(i, 1, TRAIL_OFF);
+                    checkSemaphoreIn(i, 2, TRAIL_ON);
+                    // check stazione
+                    checkStation(i);
+                    // check semaforo
+                    //checkSemaphoreOut(i, 3, TRAIL_ON); // il semaforo 3 in realtà dovrebbe controllare da solo anche il 4 e 5....
                     break;
                 case(3):
                     // check semaforo
                     checkSemaphoreIn(i, 0, TRAIL_OFF);
                     checkSemaphoreIn(i, 1, TRAIL_OFF);
-                    checkSemaphoreIn(i, 2, TRAIL_ON);
-                    // check stazione
-                    checkStation(i);
-                    // check semaforo
-                    checkSemaphoreOut(i, 3, TRAIL_ON); // il semaforo 3 in realtà dovrebbe controllare da solo anche il 4 e 5....
-                    break;
-                case(4):
-                    // check semaforo
-                    //checkSemaphoreIn(i, 0, TRAIL_OFF);
-                    //checkSemaphoreIn(i, 1, TRAIL_OFF);
-                    //checkSemaphoreIn(i, 2, TRAIL_OFF);
+                    checkSemaphoreIn(i, 2, TRAIL_OFF);
                     // check stazione
                     checkStation(i);                        // La stazione centrale deve controllare i sem successivi
                     // }
@@ -588,28 +599,11 @@ void *station_manager(void *p){
         }
 
         // GESTIONE CODE DEI SEMAFORI E DELLE STAZIONI
-        clock_gettime(CLOCK_MONOTONIC, &now);
-
         for (i = 0; i < STATIONS_NUM; i++){
-            if (station[i].move_queue ==  true){
-                for (j = 1; j <= station[i].queue; j++) {
-                    station[i].queue_list[j-1] = station[i].queue_list[j];
-                    train_par[station[i].queue_list[j-1]].ready_to_go_flag = true;
-                }
-                station[i].move_queue   = false;
-                station[i].xPointIn     += train_space;
-                station[i].xPointStop   += train_space;
-                station[i].queue --;
-                if (station[i].queue > 0 && time_cmp(now, station[i].t) == 1)   station[i].status = false;
-            }    
+            if (station[i].move_queue == true)     move_station_queue(i);
         }
 
-        for (i = 0; i < SEMAPHORES_NUM; i++){
-            if (semaphores[i].move_queue ==  true){
-                semaphores[i].move_queue = false;
-                semaphores[i].queue --;
-            }
-        }
+        move_semaphore_queue();
 
         wait_for_activation(id);
     }
@@ -619,50 +613,83 @@ void *station_manager(void *p){
 // 
 // Assegna il binario corretto ad ogni nuovo treno
 //-------------------------------------------------------------------------------------------------------------------------
-void binary_assignment(int ready_trains_num){
-    int assigned_trains;
-    int i;
-    int bin;
-    int last_assigned_train_id;
+void binary_assignment(){
 
-    last_assigned_train_id = 0;
+    bool    run;
+    bool    binary_assigned;
+    int     i;
+    int     bin;
+    int     trainId;
+    int     priority;
+    int     ready_trains_num_local;
 
-    if(ready_trains_num > 0){
-            assigned_trains = 0;
-            for (i = 0; i < ready_trains_num; i++){
+        
+    pthread_mutex_lock(&ready_trains_num_mutex);
+    ready_trains_num_local = ready_trains_num;
+    pthread_mutex_unlock(&ready_trains_num_mutex);
 
-                if(train_par[last_assigned_train_id + ready_trains_num - i].run == false) {
-                    switch (train_par[last_assigned_train_id + ready_trains_num - i].priority) {
+
+    if(ready_trains_num_local > 0){
+            for (i = 0; i < ready_trains_num_local; i++){
+                
+                pthread_mutex_lock(&last_assigned_train_id_mutex);
+                trainId = last_assigned_train_id + 1;
+                pthread_mutex_unlock(&last_assigned_train_id_mutex);
+
+                pthread_mutex_lock(&train_par[trainId].mutex);
+                binary_assigned = train_par[trainId].binary_assigned;
+                priority        = train_par[trainId].priority;
+                pthread_mutex_unlock(&train_par[trainId].mutex);
+
+                if(binary_assigned == false) {
+
+                    pthread_mutex_lock(&trains_in_binary_mutex);
+                    switch (priority) {
 
                     case 3:
-                        if (trains_in_binary[4] <= trains_in_binary[3]) bin = 4;
-                        else if (trains_in_binary[3] <= trains_in_binary[2]) bin = 3;
-                        else if (trains_in_binary[2] <= trains_in_binary[1]) bin = 2;
-                        else bin = 1;
+                        if (trains_in_binary[3] <= trains_in_binary[2])         bin = 3;
+                        else if (trains_in_binary[2] <= trains_in_binary[1])    bin = 2;
+                        else if (trains_in_binary[1] <= trains_in_binary[0])    bin = 1;
+                        else                                                    bin = 0;
                         break;
                     
                     case 2:
-                        if (trains_in_binary[3] <= trains_in_binary[2]) bin = 3;
-                        else if (trains_in_binary[2] <= trains_in_binary[1]) bin = 2;
-                        else bin = 1;
+                        if (trains_in_binary[2] <= trains_in_binary[1])         bin = 2;
+                        else if (trains_in_binary[1] <= trains_in_binary[0])    bin = 1;
+                        else                                                    bin = 0;
                         break;
                     
                     case 1:
-                        if (trains_in_binary[2] <= trains_in_binary[1]) bin = 2;
-                        else bin = 1;
+                        if (trains_in_binary[1] <= trains_in_binary[0])         bin = 1;
+                        else                                                    bin = 0;
                         break;
 
                     default:
                         break;
                     }
+                    pthread_mutex_unlock(&trains_in_binary_mutex);
 
-                    train_par[last_assigned_train_id + ready_trains_num - i].binary = bin;
-                    train_par[last_assigned_train_id + ready_trains_num - i].binary_occupied = true;
+                    pthread_mutex_lock(&train_par[trainId].mutex);
+                    train_par[trainId].binary             = bin;
+                    train_par[trainId].binary_occupied    = true;
+                    train_par[trainId].binary_assigned    = true;
+                    pthread_mutex_unlock(&train_par[trainId].mutex);
+
+                    pthread_mutex_lock(&last_assigned_train_id_mutex);
+                    last_assigned_train_id = trainId;
+                    pthread_mutex_unlock(&last_assigned_train_id_mutex);
+
+                    pthread_mutex_lock(&ready_trains_num_mutex);
                     ready_trains_num--;
-                    assigned_trains++;                    
+                    pthread_mutex_unlock(&ready_trains_num_mutex);
+
+                    // Incremento il numero di treni che andranno alla stessa stazione
+                    pthread_mutex_lock(&trains_in_binary_mutex);
+                    trains_in_binary[bin]++;   
+                    pthread_mutex_unlock(&trains_in_binary_mutex);                 
                 }
+
             }
-            last_assigned_train_id += assigned_trains;
         }
 }
 //-------------------------------------------------------------------------------------------------------------------------
@@ -670,66 +697,23 @@ void binary_assignment(int ready_trains_num){
 // 
 // 
 //-------------------------------------------------------------------------------------------------------------------------
-void checkSemaphoreIn(int trainId, int semId, int semStateRequired) {
+void checkSemaphoreIn(int trainId, int semId, int SemRequiredState){
 
-    if (train_par[trainId].checked == false) {
-    
-        if ((semaphores[semId].trail_state != semStateRequired) && 
-            (train_par[trainId].posx <= semaphores[semId].xPointOut) &&
-            (train_par[trainId].posx >= semaphores[semId].xPointIn)){
-                train_par[trainId].checked = true;
-                semaphores[semId].status = false;
-                train_par[trainId].stop_x = semaphores[semId].xPointStop;
-
-            if (semStateRequired == TRAIL_ON) {
-                semaphores[semId].trail_angle -= 1;
-                if (semaphores[semId].trail_angle == TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE){
-                    semaphores[semId].trail_state = semStateRequired;
-                    semaphores[semId].status = true;
-                    semaphores[semId].trail_angle_cnt = 0;
-                }
-            }
-            if (semStateRequired == TRAIL_OFF){
-                semaphores[semId].trail_angle += 1;
-                if (semaphores[semId].trail_angle == TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE){
-                    semaphores[semId].trail_state = semStateRequired;
-                    semaphores[semId].status = true;
-                    semaphores[semId].trail_angle_cnt = 0;
-                }
-            }
-        }
-    }
 }
 //-------------------------------------------------------------------------------------------------------------------------
-// FUNZIONE checkSemaphoreOut
+// FUNZIONE move_semaphore_queue
 // 
 // 
 //-------------------------------------------------------------------------------------------------------------------------
-void checkSemaphoreOut(int trainId, int semId, int semStateRequired) {
-    
-    if ((semaphores[semId].trail_state != semStateRequired) && 
-        (train_par[trainId].posx <= semaphores[semId].xPointOut) &&
-        (train_par[trainId].posx >= semaphores[semId].xPointIn)){
-            semaphores[semId].status = false;
-            train_par[trainId].stopToCheck = &semaphores[semId];
+void move_semaphore_queue(){
+    int i;
 
-        if (semStateRequired == TRAIL_ON) {
-            semaphores[semId].trail_angle +=1;
-            if (semaphores[semId].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE){
-                semaphores[semId].trail_state = semStateRequired;
-                semaphores[semId].status = true;
-                semaphores[semId].trail_angle_cnt = 0;
+        for (i = 0; i < SEMAPHORES_NUM; i++){
+            if (semaphores[i].move_queue ==  true){
+                semaphores[i].move_queue = false;
+                semaphores[i].queue --;
             }
         }
-        if (semStateRequired == TRAIL_OFF){
-            semaphores[semId].trail_angle -= 1;
-            if (semaphores[semId].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE){
-                semaphores[semId].trail_state = semStateRequired;
-                semaphores[semId].status = true;
-                semaphores[semId].trail_angle_cnt = 0;
-            }
-        }
-    }
 }
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE CheckStation
@@ -738,28 +722,36 @@ void checkSemaphoreOut(int trainId, int semId, int semStateRequired) {
 //-------------------------------------------------------------------------------------------------------------------------
 void checkStation(int trainId) {
     bool    checked;
+    bool    station_passed;
+    bool    semaphore_flag;
     struct  timespec    now;
     struct  timespec    leave_time;
     int     stationId;
     int     posx;
-
-    stationId = train_par[trainId].binary-1;
-    posx = train_par[trainId].posx;
-    checked = train_par[trainId].checked;
+    
+    pthread_mutex_lock(&train_par[trainId].mutex);
+    stationId       = train_par[trainId].binary;
+    posx            = train_par[trainId].posx;
+    checked         = train_par[trainId].checked;
+    station_passed  = train_par[trainId].station_passed[stationId];
+    pthread_mutex_unlock(&train_par[trainId].mutex);
 
     if (checked == false) {
         
         // Controllo se mi trovo nel range della stazione
-        if (posx > station[stationId].xPointIn &&
-            posx < station[stationId].xPointOut && 
-            train_par[trainId].station_passed[stationId] == false ){
+        if (posx > station[stationId].xPointIn && posx < station[stationId].xPointOut && station_passed == false ){
 
             // Flag per evitare di controllare tutti i semafori successivi
+            pthread_mutex_lock(&train_par[trainId].mutex);
             train_par[trainId].checked = true;
+            semaphore_flag  = train_par[trainId].semaphore_flag;
+            pthread_mutex_unlock(&train_par[trainId].mutex);
 
             // Eseguito solo una volta quando il semaforo diventa verde
-            if (train_par[trainId].semaphore_flag == false){
+            if (semaphore_flag == false){
                 
+                pthread_mutex_lock(&train_par[trainId].mutex);
+
                 // Flag per comunicare che il treno è in stazione
                 train_par[trainId].semaphore_flag = true;
 
@@ -777,9 +769,11 @@ void checkStation(int trainId) {
                     // Inserisco il treno in coda
                     station[stationId].queue_list[station[stationId].queue] = trainId;
                     station[stationId].queue        += 1;
-                    station[stationId].xPointIn     -= train_space;
-                    station[stationId].xPointStop   -= train_space;
+                    station[stationId].xPointIn     -= TRAIN_SPACE;
+                    station[stationId].xPointStop   -= TRAIN_SPACE;
                 }
+
+                pthread_mutex_unlock(&train_par[trainId].mutex);
 
                 // Aggiorno la struttura della stazione, il semaforo diventa rosso e salvo l'istante deve tornare verde
                 clock_gettime(CLOCK_MONOTONIC, &now);                
@@ -799,26 +793,63 @@ void checkStation(int trainId) {
                     time_add_ms(&now, 200);
                     time_copy(&station[stationId].t, now);
                     station[stationId].status = true;
+
+                    pthread_mutex_lock(&train_par[trainId].mutex);
                     train_par[trainId].station_passed[stationId] = true;
+                    pthread_mutex_unlock(&train_par[trainId].mutex);
                 }     
             }   
         }
     }
 }
 //-------------------------------------------------------------------------------------------------------------------------
-// TASK new_train
+// FUNZIONE move_station_queue
+//
+// Muove la coda di tutte le stazioni
+//-------------------------------------------------------------------------------------------------------------------------
+void move_station_queue(int stationId){
+
+    struct  timespec now;
+    int     i;
+    int     trainId;
+
+    // Legge l'istante iniziale
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    // Muove la coda 
+    for (i = 1; i <= station[stationId].queue; i++) {
+        station[stationId].queue_list[i-1] = station[stationId].queue_list[i];
+
+        trainId = station[stationId].queue_list[i-1];
+        pthread_mutex_lock(&train_par[trainId].mutex);
+        train_par[trainId].ready_to_go_flag = true;
+        pthread_mutex_unlock(&train_par[trainId].mutex);
+    }
+
+    station[stationId].move_queue   = false;
+    station[stationId].xPointIn     += TRAIN_SPACE;
+    station[stationId].xPointStop   += TRAIN_SPACE;
+    station[stationId].queue --;
+
+    // Dopo il tempo di attesa il semaforo torna rosso
+    if (station[i].queue > 0 && time_cmp(now, station[i].t) == 1)   station[i].status = false;
+      
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// TASK train
 //
 // Crea un nuovo task treno e ne gestisce il movimento
 //-------------------------------------------------------------------------------------------------------------------------
 
-void *new_train(void *p) {
+void *train(void *p) {
     bool    first_of_queue;
     bool    semaphore_flag;
+    bool    binary_assigned;
     int     id;
     int     stop_id;
     int     stop_type;
     int     j;
-    int     binary_num;
     int     posx;
     int     stop_x;
     int     previous_train_pos_x;
@@ -834,27 +865,25 @@ void *new_train(void *p) {
     set_activation(id);
     set_train_parameters(id);
 
-    binary_num = 0;
+    binary_assigned = false;
 
     // ATTENDO ASSEGNAZIONE BINARIO
-    while(binary_num == 0){
+    while(binary_assigned == false){
 
         pthread_mutex_lock(&train_par[id].mutex);
-        binary_num = train_par[id].binary;
+        binary_assigned = train_par[id].binary_assigned;
         pthread_mutex_unlock(&train_par[id].mutex);
 
         wait_for_activation(id);
         }
-        
     
     // CHECK COLLISIONI IN INGRESSO ALLA STAZIONE
     if(id != 1) {
-
         pthread_mutex_lock(&train_par[id-1].mutex);
         previous_train_pos_x = train_par[id-1].posx;
         pthread_mutex_unlock(&train_par[id-1].mutex);
 
-        while (previous_train_pos_x < 2*train_w*WAGONS) {
+        while (previous_train_pos_x < 2*TRAIN_W*WAGONS) {
 
             pthread_mutex_lock(&train_par[id-1].mutex);
             previous_train_pos_x = train_par[id-1].posx;
@@ -865,19 +894,12 @@ void *new_train(void *p) {
     }
 
     // TRENO PRONTO 
-    // Incremento il numero di treni che andranno alla stessa stazione
-    trains_in_binary[binary_num]++;
+    
     // Salvo il locale i parametri iniziali del treno
     pthread_mutex_lock(&train_par[id].mutex);
     train_par[id].run = true;
-    posx = train_par[id].posx;
-    stop_x = train_par[id].stop_x;
-    // Parametri dei vari vagoni
-    for (j = 0; j < WAGONS; j++){
-        train_par[id].wagons[j].posx = 0 - (j*(train_w + wagons_space));
-        train_par[id].wagons[j].posy = H/2 - space/2 - train_h/2;
-        train_par[id].wagons[j].bmp = train_bmp[1].train1;
-    }
+    posx    = train_par[id].posx;
+    stop_x  = train_par[id].stop_x;
     pthread_mutex_unlock(&train_par[id].mutex);
 
     // INIT MACCHINA A STATI
@@ -887,12 +909,13 @@ void *new_train(void *p) {
 
     // TRENO IN MOVIMENTO
     while (posx < W      &&      EXIT == false){
-        
+
         // Aggiorno in locale i parametri del treno
         pthread_mutex_lock(&train_par[id].mutex);
-        posx = train_par[id].posx;
-        stop_x = train_par[id].stop_x;
-        semaphore_flag = train_par[id].semaphore_flag;
+        train_par[id].posx  = train_par[id].wagons[0].posx;
+        posx                = train_par[id].posx;
+        stop_x              = train_par[id].stop_x;
+        semaphore_flag      = train_par[id].semaphore_flag;
         if (train_par[id].pos_in_queue == 0)    first_of_queue = true;
         else                                    first_of_queue = false;
         pthread_mutex_unlock(&train_par[id].mutex);
@@ -908,9 +931,12 @@ void *new_train(void *p) {
 
                 // Check fermata
                 if (semaphore_flag == true){
-                    stop_id = train_par[id].stop_id;
-                    stop_type = train_par[id].stop_type;
-                    next_state = SLOW_DOWN;
+                    pthread_mutex_lock(&train_par[id].mutex);
+                    stop_id     = train_par[id].stop_id;
+                    stop_type   = train_par[id].stop_type;
+                    pthread_mutex_unlock(&train_par[id].mutex);
+
+                    next_state  = SLOW_DOWN;
                 }
                 break;
 
@@ -930,16 +956,18 @@ void *new_train(void *p) {
 
             case(QUEUE):            
                 // MOVIMENTO DELLA CODA DEL SEMAFORO
+                pthread_mutex_lock(&train_par[id].mutex);
                 if (train_par[id].ready_to_go_flag == true) {
                     train_par[id].ready_to_go_flag = false;
                     train_par[id].queue = true;
-                    train_par[id].stop_x += train_space;
+                    train_par[id].stop_x += TRAIN_SPACE;
                     train_par[id].currentVel = MAX_VEL;
                     train_par[id].semaphore_flag = false;
                     train_par[id].pos_in_queue --;
                     next_state = SLOW_DOWN;
                 }
-            
+                pthread_mutex_unlock(&train_par[id].mutex);
+
                 break;
 
             case(STOP):
@@ -947,12 +975,18 @@ void *new_train(void *p) {
                 // In base a tipo e ID controllo quando il sem diventa verde per ripartire
                 if (stop_type == STATION && station[stop_id].status == true) {
                     next_state = SPEED_UP;
+                    pthread_mutex_lock(&train_par[id].mutex);
                     train_par[id].queue = false;
+                    pthread_mutex_unlock(&train_par[id].mutex);
+
                     station[stop_id].move_queue = true;
                 }
                 if (stop_type == SEMAPHORE && semaphores[stop_id].status == true) {
                     next_state = SPEED_UP;
+                    pthread_mutex_lock(&train_par[id].mutex);
                     train_par[id].queue = false;
+                    pthread_mutex_unlock(&train_par[id].mutex);
+
                     semaphores[stop_id].move_queue = true;
                 }
                 break;
@@ -979,7 +1013,11 @@ void *new_train(void *p) {
         // DECREMENTO IL NUMERO DI TRENI CHE STA OCCUPANDO IL BINARIO QUANDO SUPERO LA STAZIONE
         pthread_mutex_lock(&train_par[id].mutex);
         if (posx > W/2 && train_par[id].binary_occupied == true) {
+
+            pthread_mutex_lock(&trains_in_binary_mutex);
             trains_in_binary[train_par[id].binary]--;
+            pthread_mutex_unlock(&trains_in_binary_mutex);
+            
             train_par[id].binary_occupied = false;
         }
         pthread_mutex_unlock(&train_par[id].mutex);
@@ -1001,59 +1039,69 @@ void *new_train(void *p) {
 // inizializza tutti i parametri del treno
 //---------------------------------------------------------------------------
 void set_train_parameters(int i) {
-    pthread_mutex_t     train_mux = PTHREAD_MUTEX_INITIALIZER;
+    
     int random_num;
     int j;
 
+    pthread_mutex_t     train_mux = PTHREAD_MUTEX_INITIALIZER;
+
     // Incremento il numero di treni in attesa del binario (GLOBALE)
+    pthread_mutex_lock(&ready_trains_num_mutex);
     ready_trains_num ++;
+    pthread_mutex_unlock(&ready_trains_num_mutex);
 
     // Seme per la funzione rand()
     srand(time(NULL)+ i);             
     random_num = rand();
 
     // Inizializzo la struttura del treno
-    train_par[i].run                    = false;                         
-    train_par[i].posx                   = 0;
-    train_par[i].posy                   = H/2 - space/2 - train_h/2;
-    train_par[i].currentVel             = MAX_VEL; //velocità di partenza
-    train_par[i].count                  = 0;
-    train_par[i].direction              = (random_num)%2; // direzione random da 0 a 1
-    train_par[i].binary                 = 4; 
-    if (train_par[i].priority == 0)     train_par[i].priority = 1 + (random_num)%3;  // priorità random da 1 a 3 
-    train_par[i].semaphore_flag         = false; 
-    train_par[i].ready_to_go_flag       = false; //indica che il treno è pronto a ripartire dopo la fermata
-    train_par[i].stop_x                 = W;
-    train_par[i].pos_in_queue           = 0;
-    train_par[i].queue                  = false;
-    train_par[i].binary_occupied        = false;
-    train_par[i].checked                = false;
-    train_par[i].mutex                  = train_mux;
+    train_par[i].run                = false;     
+    train_par[i].binary_assigned    = false; 
+    train_par[i].ready_to_go_flag   = false; 
+    train_par[i].semaphore_flag     = false; 
+    train_par[i].checked            = false;
+    train_par[i].queue              = false;
+    train_par[i].binary_occupied    = false;
 
     // Struttura per indicare se il treno è già passato da una stazione
     for (j = 0; j < STATIONS_NUM; j++)      train_par[i].station_passed[j] = false;
     // Struttura per indicare se il treno è già passato da un semaforo
     for (j = 0; j < SEMAPHORES_NUM; j++)    train_par[i].sem_passed[j] = false;
-}
-/*-------------------------------------------------------------------------*/
-//  QUESTA FUNZIONE NON FUNZIONA
 
-void manage_queue(int stationId){
-    int i;
-    // se posso muovere la coda eseguo questo ciclo, altrimenti resto in attesa
-    if (station[stationId].move_queue == true) {
-        if (train_par[station[stationId].queue_list[0]].ready_to_go_flag == true){
-            station[stationId].queue--;
-            // definisco la nuova posizione di stop intermedia per tutti i treni in coda
-            for (i=1; i<=station[stationId].queue; i++) {
-                train_par[station[stationId].queue_list[i]].stop_x += train_w + stop_space;
-                train_par[station[stationId].queue_list[i]].pos_in_queue--;
-                station[stationId].queue_list[i-1] = station[stationId].queue_list[i];
-            }
+    train_par[i].direction = 0;
+//  train_par[i].direction              = (random_num)%2; // direzione random da 0 a 1
+//  train_par[i].binary                 = 0;
+    
+    // Se non viene indicata una priorità, ne scelgo una random da 1 a 3
+    if (train_par[i].priority == 0)     train_par[i].priority = 1 + (random_num)%3;
+    if (train_par[i].direction == 0)    train_par[i].posx = - TRAIN_W;
+    else                                train_par[i].posx = W;
+    
+    train_par[i].count                  = 0;
+    train_par[i].stop_x                 = W;
+    train_par[i].stop_type              = SEMAPHORE;
+    train_par[i].stop_id                = 11*train_par[i].direction;
+    train_par[i].pos_in_queue           = 0;
+    train_par[i].first_diagonal_wagon   = 0;
+    train_par[i].currentVel             = MAX_VEL;
+    train_par[i].mutex                  = train_mux;
+    // Parametri dei vari vagoni
+    for (j = 0; j < WAGONS; j++){
+
+        train_par[i].wagons[j].bmp              = train_bmp[1].train1;
+
+        if (train_par[i].direction == 0){
+            train_par[i].wagons[j].posx = - (j*(TRAIN_W + WAGONS_SPACE));
+            train_par[i].wagons[j].posy = H/2 - SPACE/2 - TRAIN_H/2;
         }
-        station[stationId].move_queue = false; // attendo che il prossimo treno esca dalla stazione
+        else {
+            // DA CONTROLLARE
+            train_par[i].wagons[j].posx = W + (j*(TRAIN_W + WAGONS_SPACE));
+            train_par[i].wagons[j].posy = H/2 + SPACE/2 - TRAIN_H/2;    
+        }
     }
 }
+
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE move
 //
@@ -1061,69 +1109,93 @@ void manage_queue(int stationId){
 //-------------------------------------------------------------------------------------------------------------------------
 void move(int i, float vel, float acc){
     
-    float newVel;
-    float deltaSpace;
-    float newStep;
-    int step;
-    int priority;
-    int bin;
-    int j;
-    int periodMs;
-    float periodS;
+    int     step;
+    int     priority;
+    int     bin;
+    int     j;
+    int     wagon_posx;
+    float   periodS;
+    float   newVel;
+    float   deltaSpace;
+    float   newStep;
+    float   deltaVel;
 
-    periodMs = get_task_per(&tp[i]);
-    periodS = (float)periodMs / 1000.0; 
-    newVel = vel + acc * periodS;
+    periodS     = (float) TRAIN_TASK_PERIOD / 1000.0;
+
+    deltaVel    = acc * periodS;
+    newVel      = vel + deltaVel;
 
     if (newVel > MAX_VEL)   newVel = MAX_VEL;
+    if (newVel < 0)         newVel = 0;
     
-    if (newVel < 0)     newVel = 0;
-    
+    pthread_mutex_lock(&train_par[i].mutex);
     train_par[i].currentVel = newVel;
-    deltaSpace = newVel * periodS;
-    newStep = deltaSpace / px2m;
-    step = (int)newStep;
-    priority = train_par[i].priority; 
-    bin = train_par[i].binary;
+    pthread_mutex_unlock(&train_par[i].mutex);
+
+    deltaSpace  = newVel * periodS;
+    step        = round(deltaSpace);
+
+    pthread_mutex_lock(&train_par[i].mutex);
+    priority    = train_par[i].priority; 
+    bin         = train_par[i].binary;
+    pthread_mutex_unlock(&train_par[i].mutex);
     
     for (j = 0; j < WAGONS; j++) {
 
-        if ((train_par[i].wagons[j].posx > trails_xPoints[bin - 1][0] - train_w) && 
-                (train_par[i].wagons[j].posx <= trails_xPoints[bin - 1][1] - train_w)){
+        pthread_mutex_lock(&train_par[i].mutex);
+        wagon_posx = train_par[i].wagons[j].posx + TRAIN_W;
+        pthread_mutex_unlock(&train_par[i].mutex);
+
+        if      (wagon_posx > trails_xPoints[bin][0]   &&   wagon_posx < trails_xPoints[bin][1]){
             move_diag_up(i, j, priority, step);
         }
-        else if ((train_par[i].wagons[j].posx > trails_xPoints[bin -1][2] - train_h) && 
-                (train_par[i].wagons[j].posx <= trails_xPoints[bin -1][3] - train_h)){
+        else if (wagon_posx > trails_xPoints[bin][2] + round(TRAIN_W*sqrt(2)/2)  &&   wagon_posx < trails_xPoints[bin][3]){
+            
             move_diag_down(i, j, priority, step);
         }
         else{
-            
             // i due if qua sotto servono a riallineare i vagoni dopo essersi mossi in diagonale visto che si disallineavano
-            if (train_par[i].wagons[j].posx > trails_xPoints[bin - 1][3] - train_h) {
-                train_par[i].wagons[j].posy = (H - space - train_h)/2;
+            if (wagon_posx < trails_xPoints[bin][2] - TRAIN_H   &&   wagon_posx > trails_xPoints[bin][1] - TRAIN_W) {
+                train_par[i].wagons[j].posy = (bin + 1)*SPACE - TRAIN_H/2;
+                
             }
-            else if ((train_par[i].wagons[j].posx <= trails_xPoints[bin - 1][2] - train_h) && 
-                    (train_par[i].wagons[j].posx >trails_xPoints[bin - 1][1] - train_w)) {
-                train_par[i].wagons[j].posy = bin*space - train_h/2;
-            }  
+            else if (wagon_posx > trails_xPoints[bin][3] - TRAIN_H) {
+                train_par[i].wagons[j].posy = (H - SPACE - TRAIN_H)/2;
+            }
             move_forward(i, j, priority, step);
         }
     }
 }
 /*-------------------------------------------------------------------------*/
 void move_diag_up(int i, int j ,int priority, int inc){
+//     int k;
+//     int first_wagon;
 
-    inc = (int) inc*cosf(M_PI_4);
+//     inc = round(inc*sqrt(2)/2);
+
+//     if (j == first_wagon) {
+//         train_par[i].wagons[j].posx += inc;
+//         train_par[i].wagons[j].posy -= inc;
+//         train_par[i].wagons[j].bmp = train_bmp[priority].train2;
+//     }
+//     else {
+//         train_par[i].wagons[j].posx = train_par[i].wagons[j-1].posx - round((TRAIN_W + WAGONS_SPACE)*sqrt(2)/2);
+//         train_par[i].wagons[j].posy = train_par[i].wagons[j-1].posy + round((TRAIN_W + WAGONS_SPACE)*sqrt(2)/2);
+//         train_par[i].wagons[j].bmp = train_bmp[priority].train2;
+//     }
+// }
 
     if (j == 0){
         // aggiorna la posizione di riferimento del treno come quella del primo vagone, 
         // così che continuino a funzionare tutti i check fatti nel codice
         train_par[i].posx += inc;
-        train_par[i].posy -= inc;
+        //train_par[i].posy -= inc;
     }
     train_par[i].wagons[j].bmp = train_bmp[priority].train2;
     train_par[i].wagons[j].posx += inc;
     train_par[i].wagons[j].posy -= inc;
+    // train_par[i].wagons[j].posx = train_par[i].wagons[j-1].posx - (j*(TRAIN_W*1.1)); 
+    // train_par[i].wagons[j].posy = train_par[i].wagons[j-1].posy - (j*(TRAIN_W*1.1));
 }
 /*-------------------------------------------------------------------------*/
 void move_diag_down(int i, int j, int priority, int inc){
@@ -1132,7 +1204,7 @@ void move_diag_down(int i, int j, int priority, int inc){
         // aggiorna la posizione di riferimento del treno come quella del primo vagone, 
         // così che continuino a funzionare tutti i check fatti nel codice
         train_par[i].posx += (int)(((float)inc)*cosf(M_PI_4));
-        train_par[i].posy += (int)(((float)inc)*sinf(M_PI_4));    
+        //train_par[i].posy += (int)(((float)inc)*sinf(M_PI_4));    
     }
     train_par[i].wagons[j].bmp = train_bmp[priority].train3;
     train_par[i].wagons[j].posx += (int)(((float)inc)*cosf(M_PI_4));
@@ -1140,13 +1212,14 @@ void move_diag_down(int i, int j, int priority, int inc){
 }
 /*-------------------------------------------------------------------------*/
 void move_forward(int i, int j, int priority, int inc) {
+    
     if (j == 0) {
         // aggiorna la posizione di riferimento del treno come quella del primo vagone, 
         // così che continuino a funzionare tutti i check fatti nel codice
         train_par[i].posx += inc;    
     }
     train_par[i].wagons[j].bmp = train_bmp[priority].train1;
-    train_par[i].wagons[j].posx = train_par[i].posx - (j*(train_w*1.1));
+    train_par[i].wagons[j].posx = train_par[i].posx - (j*(TRAIN_W*1.1));
 
 }
 

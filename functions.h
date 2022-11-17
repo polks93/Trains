@@ -7,22 +7,22 @@
 // TASK
 #define     TMAX                                100
 #define     TRAIN_TASK_PERIOD                   20
-#define     TRAIN_TASK_DL                       20
-#define     TRAIN_TASK_PRIO                     255   
+#define     TRAIN_TASK_DL                       10
+#define     TRAIN_TASK_PRIO                     255 
 
 #define     STATION_MANAGER_TASK_ID             TMAX
 #define     STATION_MANAGER_TASK_PERIOD         20
-#define     STATION_MANAGER_TASK_DL             20
+#define     STATION_MANAGER_TASK_DL             10
 #define     STATION_MANAGER_TASK_PRIO           255
 
 #define     GRAPHIC_TASK_ID                     TMAX + 1
 #define     GRAPHIC_TASK_PERIOD                 20
-#define     GRAPHIC_TASK_DL                     20
+#define     GRAPHIC_TASK_DL                     10
 #define     GRAPHIC_TASK_PRIO                   255
 
 #define     USER_TASK_ID                        TMAX + 2
-#define     USER_TASK_PERIOD                    100
-#define     USER_TASK_DL                        100
+#define     USER_TASK_PERIOD                    50
+#define     USER_TASK_DL                        10
 #define     USER_TASK_PRIO                      255
 
 // GRAFICA
@@ -118,6 +118,7 @@ struct station_struct{
 };
 
 struct wagon_parameters {
+    bool    diag_passed;
     int     posx;
     int     posy;
     BITMAP  *bmp;
@@ -146,13 +147,15 @@ struct train_parameters {
     float               currentVel;
     pthread_mutex_t     mutex;
     struct              wagon_parameters wagons[WAGONS];
+    BITMAP              *bmp[3];
 };
 
 // Variabili generiche
-bool EXIT;
-bool EXIT_COMMAND;
-int ready_trains_num;
-int last_assigned_train_id;
+bool    EXIT;
+bool    EXIT_COMMAND;
+int     ready_trains_num;
+int     last_assigned_train_id;
+int     total_train_dl;
 
 // Mutex
 pthread_mutex_t ready_trains_num_mutex;
@@ -191,7 +194,7 @@ struct station_struct   semaphores[SEMAPHORES_NUM];
 struct train_parameters train_par[TMAX];
 
 /** Array di strutture dei bitmap dei treni */
-struct train_bitmap     train_bmp[4];
+struct train_bitmap     train_bmp[3];
 
 /** Array di strutture dei pulsanti */
 struct button_struct    button[N_BUTTONS];
@@ -219,7 +222,6 @@ void initialize();
 void *user_task(void *p);
 
 int check_button(int x, int y);
-
 
 /**
  * Graphic task. 
@@ -259,22 +261,22 @@ void set_train_parameters(int i);
   * Manages the train movements. 
   */
 // void move(int i, int step);
-void move(int i, float vel, float acc);
+void move(int trainId, float vel, float acc);
 
 /**
  * Moves the train along diagonal trail towards up.
  */
-void move_diag_up(int i, int j, int priority, int inc);
+void move_diag_up(int i, int j, int inc);
 
 /**
  * Moves the train along diagonal trail towards down.
  */
-void move_diag_down(int i, int j, int priority, int inc);
+void move_diag_down(int i, int j, int inc);
 
 /**
  * Move the train along straight trail.
  */
-void move_forward(int i, int j, int priority, int inc);
+void move_forward(int i, int j, int inc);
 
 
 void checkSemaphoreIn(int trainId, int semId, int semStateRequired);

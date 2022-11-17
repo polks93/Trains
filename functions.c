@@ -23,6 +23,7 @@ void initialize() {
     int trail_diag;
 
     printf("Loading ... \n");
+
     // INIT MUTEX
     pthread_mutex_t     ready_trains_num_mutex          = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_t     last_assigned_train_id_mutex    = PTHREAD_MUTEX_INITIALIZER;
@@ -34,6 +35,8 @@ void initialize() {
     EXIT_COMMAND            = false;
     ready_trains_num        = 0;
     last_assigned_train_id  = 0;
+    total_train_dl          = 0;
+
     for (i = 0; i < STATIONS_NUM; i++)      trains_in_binary[i] = 0;
     for (i = 0; i < STATIONS_NUM; i++)      station[i].mutex    = station_mutex;
     for (i = 0; i < SEMAPHORES_NUM; i++)    semaphores[i].mutex = station_mutex;
@@ -56,25 +59,20 @@ void initialize() {
     sem_r = load_bitmap("img/sem/sem_red.bmp", NULL);
 
     // BITMAPS DEI TRENI
-    // orange
-    train_bmp[0].train1 = load_bitmap("img/trains/orange.bmp", NULL);
-    train_bmp[0].train2 = load_bitmap("img/trains/orange_diag.bmp", NULL);
-    train_bmp[0].train3 = load_bitmap("img/trains/orange_diag2.bmp", NULL);
-
     // green
-    train_bmp[1].train1 = load_bitmap("img/trains/green.bmp", NULL);
-    train_bmp[1].train2 = load_bitmap("img/trains/green_diag.bmp", NULL);
-    train_bmp[1].train3 = load_bitmap("img/trains/green_diag2.bmp", NULL);    
+    train_bmp[0].train1 = load_bitmap("img/trains/green.bmp", NULL);
+    train_bmp[0].train2 = load_bitmap("img/trains/green_diag.bmp", NULL);
+    train_bmp[0].train3 = load_bitmap("img/trains/green_diag2.bmp", NULL);    
     
     // blue
-    train_bmp[2].train1 = load_bitmap("img/trains/blue.bmp", NULL);
-    train_bmp[2].train2 = load_bitmap("img/trains/blue_diag.bmp", NULL);
-    train_bmp[2].train3 = load_bitmap("img/trains/blue_diag2.bmp", NULL);
+    train_bmp[1].train1 = load_bitmap("img/trains/blue.bmp", NULL);
+    train_bmp[1].train2 = load_bitmap("img/trains/blue_diag.bmp", NULL);
+    train_bmp[1].train3 = load_bitmap("img/trains/blue_diag2.bmp", NULL);
 
     // red
-    train_bmp[3].train1 = load_bitmap("img/trains/red.bmp", NULL);
-    train_bmp[3].train2 = load_bitmap("img/trains/red_diag.bmp", NULL);
-    train_bmp[3].train3 = load_bitmap("img/trains/red_diag2.bmp", NULL);
+    train_bmp[2].train1 = load_bitmap("img/trains/red.bmp", NULL);
+    train_bmp[2].train2 = load_bitmap("img/trains/red_diag.bmp", NULL);
+    train_bmp[2].train3 = load_bitmap("img/trains/red_diag2.bmp", NULL);
 
     // BITMAPS DEI BINARI
     trail = load_bitmap("img/trail.bmp", NULL);
@@ -187,8 +185,8 @@ void initialize() {
     
     // STRUTTURA SEMAFORI
     for (i = 0; i<=2; i++){
-        semaphores[i].xPointStop    = W/2 + (2*i - 7)*SPACE - (TRAIN_W + 5);
-        semaphores[i].xPointDraw    = semaphores[i].xPointStop + (TRAIN_W + 5);
+        semaphores[i].xPointStop    = W/2 + (2*i - 7)*SPACE - 5;
+        semaphores[i].xPointDraw    = semaphores[i].xPointStop + 5;
         semaphores[i].yPointDraw    = H/2 - SPACE/2;
         semaphores[i].xPointTrail   = semaphores[i].xPointDraw;
         semaphores[i].yPointTrail   = semaphores[i].yPointDraw;
@@ -196,7 +194,7 @@ void initialize() {
         semaphores[i].xPointIn      = semaphores[i].xPointStop - SLOW_DOWN_SPACE;
         semaphores[i].xPointOut     = semaphores[i].xPointDraw + TRAIL_W;
         
-        semaphores[i+6].xPointStop  = W/2 + (i - 4)*SPACE + (TRAIN_W + 5);
+        semaphores[i+6].xPointStop  = W/2 + (i - 4)*SPACE + 5;
         semaphores[i+6].xPointDraw  = W/2 - (i+2)*SPACE;
         semaphores[i+6].yPointDraw  = (6+i)*SPACE;
         semaphores[i+6].xPointTrail = W/2 + (2*i - 7)*SPACE;
@@ -207,8 +205,8 @@ void initialize() {
     }
 
     for (i = 3; i<=5; i++){
-        semaphores[i].xPointStop    = W/2 +(i-1)*SPACE - (TRAIN_W + 5);
-        semaphores[i].xPointDraw    = semaphores[i].xPointStop + (TRAIN_W + 5);
+        semaphores[i].xPointStop    = W/2 +(i-1)*SPACE - 5;
+        semaphores[i].xPointDraw    = semaphores[i].xPointStop + 5;
         semaphores[i].yPointDraw    = (6-i)*SPACE;
         semaphores[i].xPointTrail   = W/2 + (2*i - 3)*SPACE; 
         semaphores[i].yPointTrail   = H/2 - SPACE/2;
@@ -216,8 +214,8 @@ void initialize() {
         semaphores[i].xPointIn      = semaphores[i].xPointStop - SLOW_DOWN_SPACE;
         semaphores[i].xPointOut     = trails_xPoints[0][3];
            
-        semaphores[i+6].xPointStop  = W/2 + (2*i - 3)*SPACE + (TRAIN_W + 5);
-        semaphores[i+6].xPointDraw  = semaphores[i+6].xPointStop - (TRAIN_W + 5);
+        semaphores[i+6].xPointStop  = W/2 + (2*i - 3)*SPACE + 5;
+        semaphores[i+6].xPointDraw  = semaphores[i+6].xPointStop - 5;
         semaphores[i+6].yPointDraw  = H/2 + SPACE/2;
         semaphores[i+6].xPointTrail = semaphores[i+6].xPointDraw;
         semaphores[i+6].yPointTrail = semaphores[i+6].yPointDraw;
@@ -239,8 +237,8 @@ void initialize() {
 
     // STRUTTURA STAZIONE
     for (i = 0; i < STATIONS_NUM/2; i++){
-        station[i].xPointStop = (W/2);
-        station[i].xPointDraw = station[i].xPointStop + (TRAIN_W + 5);
+        station[i].xPointStop = (W/2) + TRAIN_W;
+        station[i].xPointDraw = station[i].xPointStop + 5;
         station[i].yPointDraw = (i + 1) * SPACE;
         station[i].xPointIn   = station[i].xPointStop - SLOW_DOWN_SPACE;
         station[i].xPointOut  = station[i].xPointDraw + TRAIN_W;
@@ -251,8 +249,8 @@ void initialize() {
         blit(sem_g, station[i].sem, 0, 0, 0, 0, sem_g->w, sem_g->h);
     }
         for (i = STATIONS_NUM/2; i < STATIONS_NUM; i++){
-        station[i].xPointStop = (W/2);
-        station[i].xPointDraw = station[i].xPointStop - 1.5*STOP_SPACE;
+        station[i].xPointStop = (W/2) - TRAIN_W;
+        station[i].xPointDraw = station[i].xPointStop - 5;
         station[i].yPointDraw = (i + 1) * SPACE;
         station[i].xPointIn   = station[i].xPointStop + SLOW_DOWN_SPACE;
         station[i].xPointOut  = station[i].xPointDraw - TRAIN_W;
@@ -389,6 +387,9 @@ void    *user_task(void *p) {
             default:
                 break;
         }
+        
+    if(deadline_miss(id))           printf("Deadline miss of user task \n");
+    wait_for_activation(id);
     }
 }
 
@@ -469,6 +470,8 @@ void *graphics(void *p){
         // TRENI
         for (i = 1; i < TMAX; i++){
             if (train_par[i].run == true){
+                // DEBUG GRAFICO
+                line(buffer, train_par[i].posx, 0, train_par[i].posx, H,(0,0,0));
                 for (int j = 0; j < WAGONS; j++){
                     draw_sprite(buffer, train_par[i].wagons[j].bmp, train_par[i].wagons[j].posx, train_par[i].wagons[j].posy);
                 }
@@ -489,16 +492,22 @@ void *graphics(void *p){
         textout_ex(buffer, font, str, 550, 3.2*SPACE, (0,0,0),-1);
         sprintf(str, "Queue: %d", trains_in_binary[3]);
         textout_ex(buffer, font, str, 550, 4.2*SPACE, (0,0,0),-1);
-        sprintf(str, "ready trains number %d", ready_trains_num);
-        textout_ex(interface_buffer, font, str, 400, 20, (0,0,0), -1);
+
+        // STAMPA I DL MISS SU SCHERMO
+        sprintf(str, "GRAPHIC TASK DL: %d", tp[GRAPHIC_TASK_ID].dmiss);
+        textout_ex(interface_buffer, font, str, 800, 10, (0,0,0), -1);
+        sprintf(str, "USER TASK DL: %d", tp[USER_TASK_ID].dmiss);
+        textout_ex(interface_buffer, font, str, 800, 30, (0,0,0), -1);
+        sprintf(str, "STATION MANAGER TASK DL: %d", tp[STATION_MANAGER_TASK_ID].dmiss);
+        textout_ex(interface_buffer, font, str, 800, 50, (0,0,0), -1);
+        sprintf(str, "TOTAL TRAIN TASK DL: %d", total_train_dl);
+        textout_ex(interface_buffer, font, str, 800, 70, (0,0,0), -1);
 
         // int k = 4;
-        // line(buffer, station[k].xPointIn, 0, station[k].xPointIn, H, (0,0,0));
-        // line(buffer, station[k+1].xPointIn, 0, station[k+1].xPointIn, H, (0,0,0));
-        // line(buffer, station[k+2].xPointIn, 0, station[k+2].xPointIn, H, (0,0,0));
-        // line(buffer, station[k+3].xPointIn, 0, station[k+3].xPointIn, H, (0,0,0));
-
-
+        // line(buffer, station[k].xPointStop, 0,   station[k].xPointStop, H, (0,0,0));
+        // line(buffer, station[k+1].xPointStop, 0, station[k+1].xPointStop, H, (0,0,0));
+        // line(buffer, station[k+2].xPointStop, 0, station[k+2].xPointStop, H, (0,0,0));
+        // line(buffer, station[k+3].xPointStop, 0, station[k+3].xPointStop, H, (0,0,0));
 
         // DISEGNO IL BUFFER SULLO SCHERMO
         blit(buffer, screen, 0, 0, 0, 0, background->w, background->h);
@@ -506,19 +515,17 @@ void *graphics(void *p){
         show_mouse(screen);
 
         // DEADLINE MISS
-        if (deadline_miss(id))      printf("deadline miss of graphic task\n");
-              
+        if(deadline_miss(id))       printf("Deadline miss of graphic task \n");     
         wait_for_activation(id);
     }
 
     destroy_bitmap(buffer);
     destroy_bitmap(background);
     destroy_bitmap(sem_r);
-    destroy_bitmap(sem_y);
     destroy_bitmap(sem_g);
     destroy_bitmap(trail);
     destroy_bitmap(platform);
-        for (i = 0; i <= 3; i ++) {
+        for (i = 0; i < 3; i ++) {
         destroy_bitmap(train_bmp[i].train1);
         destroy_bitmap(train_bmp[i].train2);
         destroy_bitmap(train_bmp[i].train3);
@@ -605,6 +612,7 @@ void *station_manager(void *p){
 
         move_semaphore_queue();
 
+        if(deadline_miss(id))           printf("Deadline miss of station manager task \n");
         wait_for_activation(id);
     }
 }
@@ -818,18 +826,19 @@ void move_station_queue(int stationId){
 
     // Muove la coda 
     for (i = 1; i <= station[stationId].queue; i++) {
-        station[stationId].queue_list[i-1] = station[stationId].queue_list[i];
 
+        station[stationId].queue_list[i-1] = station[stationId].queue_list[i];
         trainId = station[stationId].queue_list[i-1];
+
         pthread_mutex_lock(&train_par[trainId].mutex);
         train_par[trainId].ready_to_go_flag = true;
         pthread_mutex_unlock(&train_par[trainId].mutex);
     }
 
-    station[stationId].move_queue   = false;
+    station[stationId].move_queue   =  false;
     station[stationId].xPointIn     += TRAIN_SPACE;
     station[stationId].xPointStop   += TRAIN_SPACE;
-    station[stationId].queue --;
+    station[stationId].queue        --;
 
     // Dopo il tempo di attesa il semaforo torna rosso
     if (station[i].queue > 0 && time_cmp(now, station[i].t) == 1)   station[i].status = false;
@@ -873,9 +882,12 @@ void *train(void *p) {
         pthread_mutex_lock(&train_par[id].mutex);
         binary_assigned = train_par[id].binary_assigned;
         pthread_mutex_unlock(&train_par[id].mutex);
-
-        wait_for_activation(id);
+        if (deadline_miss(id)) {
+            printf("Deadline miss of train task %d \n", id);
+            total_train_dl ++;
         }
+        wait_for_activation(id);
+    }
     
     // CHECK COLLISIONI IN INGRESSO ALLA STAZIONE
     if(id != 1) {
@@ -889,12 +901,15 @@ void *train(void *p) {
             previous_train_pos_x = train_par[id-1].posx;
             pthread_mutex_unlock(&train_par[id-1].mutex);
 
+        if (deadline_miss(id)) {
+            printf("Deadline miss of train task %d \n", id);
+            total_train_dl++;
+        }
             wait_for_activation(id);
         }
     }
 
     // TRENO PRONTO 
-    
     // Salvo il locale i parametri iniziali del treno
     pthread_mutex_lock(&train_par[id].mutex);
     train_par[id].run = true;
@@ -912,7 +927,6 @@ void *train(void *p) {
 
         // Aggiorno in locale i parametri del treno
         pthread_mutex_lock(&train_par[id].mutex);
-        train_par[id].posx  = train_par[id].wagons[0].posx;
         posx                = train_par[id].posx;
         stop_x              = train_par[id].stop_x;
         semaphore_flag      = train_par[id].semaphore_flag;
@@ -931,6 +945,7 @@ void *train(void *p) {
 
                 // Check fermata
                 if (semaphore_flag == true){
+
                     pthread_mutex_lock(&train_par[id].mutex);
                     stop_id     = train_par[id].stop_id;
                     stop_type   = train_par[id].stop_type;
@@ -943,10 +958,13 @@ void *train(void *p) {
             case(SLOW_DOWN):
                 // RALLENTO PRIMA DI UN SEMAFORO
                 acc = - MAX_ACC;
+
                 pthread_mutex_lock(&train_par[id].mutex);
                 vel = train_par[id].currentVel;
                 pthread_mutex_unlock(&train_par[id].mutex);
+
                 move(id, vel, acc);
+
                 // Check fermata
                 if (posx >= stop_x ) {
                     if (first_of_queue == true)     next_state = STOP; 
@@ -958,6 +976,7 @@ void *train(void *p) {
                 // MOVIMENTO DELLA CODA DEL SEMAFORO
                 pthread_mutex_lock(&train_par[id].mutex);
                 if (train_par[id].ready_to_go_flag == true) {
+
                     train_par[id].ready_to_go_flag = false;
                     train_par[id].queue = true;
                     train_par[id].stop_x += TRAIN_SPACE;
@@ -974,6 +993,7 @@ void *train(void *p) {
                 // FERMATA AL SEMAFORO
                 // In base a tipo e ID controllo quando il sem diventa verde per ripartire
                 if (stop_type == STATION && station[stop_id].status == true) {
+
                     next_state = SPEED_UP;
                     pthread_mutex_lock(&train_par[id].mutex);
                     train_par[id].queue = false;
@@ -982,6 +1002,7 @@ void *train(void *p) {
                     station[stop_id].move_queue = true;
                 }
                 if (stop_type == SEMAPHORE && semaphores[stop_id].status == true) {
+
                     next_state = SPEED_UP;
                     pthread_mutex_lock(&train_par[id].mutex);
                     train_par[id].queue = false;
@@ -994,10 +1015,12 @@ void *train(void *p) {
             case(SPEED_UP):
                 // USCITA DAL SEMAFORO
                 acc = MAX_ACC;
+
                 pthread_mutex_lock(&train_par[id].mutex);
                 vel = train_par[id].currentVel;
                 train_par[id].semaphore_flag = false;
                 pthread_mutex_unlock(&train_par[id].mutex);
+
                 move(id, vel, acc);
                 if (vel == MAX_VEL)     next_state = GO_FAST;
                 break;
@@ -1021,8 +1044,12 @@ void *train(void *p) {
             train_par[id].binary_occupied = false;
         }
         pthread_mutex_unlock(&train_par[id].mutex);
-
+        
         // ATTENDO IL PROSSIMO CICLO
+        if (deadline_miss(id)) {
+            printf("Deadline miss of train task %d \n", id);
+            total_train_dl ++;
+        }
         wait_for_activation(id);
     }
 
@@ -1070,7 +1097,6 @@ void set_train_parameters(int i) {
 
     train_par[i].direction = 0;
 //  train_par[i].direction              = (random_num)%2; // direzione random da 0 a 1
-//  train_par[i].binary                 = 0;
     
     // Se non viene indicata una priorità, ne scelgo una random da 1 a 3
     if (train_par[i].priority == 0)     train_par[i].priority = 1 + (random_num)%3;
@@ -1085,10 +1111,15 @@ void set_train_parameters(int i) {
     train_par[i].first_diagonal_wagon   = 0;
     train_par[i].currentVel             = MAX_VEL;
     train_par[i].mutex                  = train_mux;
+    train_par[i].bmp[0]                 = train_bmp[train_par[i].priority - 1].train1;
+    train_par[i].bmp[1]                 = train_bmp[train_par[i].priority - 1].train2;
+    train_par[i].bmp[2]                 = train_bmp[train_par[i].priority - 1].train3;
+
     // Parametri dei vari vagoni
     for (j = 0; j < WAGONS; j++){
 
-        train_par[i].wagons[j].bmp              = train_bmp[1].train1;
+        train_par[i].wagons[j].bmp              = train_par[i].bmp[0];
+        train_par[i].wagons[j].diag_passed      = false;
 
         if (train_par[i].direction == 0){
             train_par[i].wagons[j].posx = - (j*(TRAIN_W + WAGONS_SPACE));
@@ -1110,7 +1141,6 @@ void set_train_parameters(int i) {
 void move(int i, float vel, float acc){
     
     int     step;
-    int     priority;
     int     bin;
     int     j;
     int     wagon_posx;
@@ -1136,7 +1166,6 @@ void move(int i, float vel, float acc){
     step        = round(deltaSpace);
 
     pthread_mutex_lock(&train_par[i].mutex);
-    priority    = train_par[i].priority; 
     bin         = train_par[i].binary;
     pthread_mutex_unlock(&train_par[i].mutex);
     
@@ -1147,11 +1176,10 @@ void move(int i, float vel, float acc){
         pthread_mutex_unlock(&train_par[i].mutex);
 
         if      (wagon_posx > trails_xPoints[bin][0]   &&   wagon_posx < trails_xPoints[bin][1]){
-            move_diag_up(i, j, priority, step);
+            move_diag_up(i, j, step);
         }
         else if (wagon_posx > trails_xPoints[bin][2] + round(TRAIN_W*sqrt(2)/2)  &&   wagon_posx < trails_xPoints[bin][3]){
-            
-            move_diag_down(i, j, priority, step);
+            move_diag_down(i, j, step);
         }
         else{
             // i due if qua sotto servono a riallineare i vagoni dopo essersi mossi in diagonale visto che si disallineavano
@@ -1162,65 +1190,86 @@ void move(int i, float vel, float acc){
             else if (wagon_posx > trails_xPoints[bin][3] - TRAIN_H) {
                 train_par[i].wagons[j].posy = (H - SPACE - TRAIN_H)/2;
             }
-            move_forward(i, j, priority, step);
+            move_forward(i, j, step);
         }
     }
+    train_par[i].posx  = train_par[i].wagons[0].posx + TRAIN_W;
+
 }
 /*-------------------------------------------------------------------------*/
-void move_diag_up(int i, int j ,int priority, int inc){
-//     int k;
-//     int first_wagon;
 
-//     inc = round(inc*sqrt(2)/2);
+void move_diag_up(int i, int j, int inc){
+    int first_wagon;
 
-//     if (j == first_wagon) {
-//         train_par[i].wagons[j].posx += inc;
-//         train_par[i].wagons[j].posy -= inc;
-//         train_par[i].wagons[j].bmp = train_bmp[priority].train2;
-//     }
-//     else {
-//         train_par[i].wagons[j].posx = train_par[i].wagons[j-1].posx - round((TRAIN_W + WAGONS_SPACE)*sqrt(2)/2);
-//         train_par[i].wagons[j].posy = train_par[i].wagons[j-1].posy + round((TRAIN_W + WAGONS_SPACE)*sqrt(2)/2);
-//         train_par[i].wagons[j].bmp = train_bmp[priority].train2;
-//     }
-// }
+    // Incremento diviso nelle due direzioni
+    inc = round(inc*sqrt(2)/2);
 
-    if (j == 0){
-        // aggiorna la posizione di riferimento del treno come quella del primo vagone, 
-        // così che continuino a funzionare tutti i check fatti nel codice
-        train_par[i].posx += inc;
-        //train_par[i].posy -= inc;
+
+    pthread_mutex_lock(&train_par[i].mutex);
+    first_wagon = train_par[i].first_diagonal_wagon;
+
+    // Se è la prima volta che il vagone si muove in diagonale, aggiorno flag e bmp
+    if(train_par[i].wagons[j].diag_passed == false) {
+        train_par[i].wagons[j].diag_passed = true;
+        train_par[i].wagons[j].bmp = train_par[i].bmp[1];
     }
-    train_par[i].wagons[j].bmp = train_bmp[priority].train2;
-    train_par[i].wagons[j].posx += inc;
-    train_par[i].wagons[j].posy -= inc;
-    // train_par[i].wagons[j].posx = train_par[i].wagons[j-1].posx - (j*(TRAIN_W*1.1)); 
-    // train_par[i].wagons[j].posy = train_par[i].wagons[j-1].posy - (j*(TRAIN_W*1.1));
-}
-/*-------------------------------------------------------------------------*/
-void move_diag_down(int i, int j, int priority, int inc){
     
-    if (j == 0){
-        // aggiorna la posizione di riferimento del treno come quella del primo vagone, 
-        // così che continuino a funzionare tutti i check fatti nel codice
-        train_par[i].posx += (int)(((float)inc)*cosf(M_PI_4));
-        //train_par[i].posy += (int)(((float)inc)*sinf(M_PI_4));    
+    // Il primo vagone incrementa la sua posizione, gli altri seguono il precedente
+    if (j == first_wagon) {
+        train_par[i].wagons[j].posx += inc;
+        train_par[i].wagons[j].posy -= inc;
     }
-    train_par[i].wagons[j].bmp = train_bmp[priority].train3;
-    train_par[i].wagons[j].posx += (int)(((float)inc)*cosf(M_PI_4));
-    train_par[i].wagons[j].posy += (int)(((float)inc)*sinf(M_PI_4));
+    else {
+        train_par[i].wagons[j].posx = train_par[i].wagons[j-1].posx - round(sqrt(2)/2*(TRAIN_W + WAGONS_SPACE));
+        train_par[i].wagons[j].posy = train_par[i].wagons[j-1].posy + round(sqrt(2)/2*(TRAIN_W + WAGONS_SPACE));
+    }
+    pthread_mutex_unlock(&train_par[i].mutex);
+
 }
 /*-------------------------------------------------------------------------*/
-void move_forward(int i, int j, int priority, int inc) {
+void move_diag_down(int i, int j, int inc){
+    int first_wagon;
     
-    if (j == 0) {
-        // aggiorna la posizione di riferimento del treno come quella del primo vagone, 
-        // così che continuino a funzionare tutti i check fatti nel codice
-        train_par[i].posx += inc;    
-    }
-    train_par[i].wagons[j].bmp = train_bmp[priority].train1;
-    train_par[i].wagons[j].posx = train_par[i].posx - (j*(TRAIN_W*1.1));
+    // Incremento diviso nelle due direzioni
+    inc = round(inc*sqrt(2)/2);
 
+    pthread_mutex_lock(&train_par[i].mutex);
+    first_wagon = train_par[i].first_diagonal_wagon;
+
+    // Se è la prima volta che il vagone si muove in diagonale, aggiorno flag e bmp
+    if(train_par[i].wagons[j].diag_passed == false) {
+        train_par[i].wagons[j].diag_passed = true;
+        train_par[i].wagons[j].bmp = train_par[i].bmp[2];
+    }
+    
+    // Il primo vagone incrementa la sua posizione, gli altri seguono il precedente
+    if (j == first_wagon) {
+        train_par[i].wagons[j].posx += inc;
+        train_par[i].wagons[j].posy += inc;
+    }
+    else {
+        train_par[i].wagons[j].posx = train_par[i].wagons[j-1].posx - round(sqrt(2)/2*(TRAIN_W + WAGONS_SPACE));
+        train_par[i].wagons[j].posy = train_par[i].wagons[j-1].posy - round(sqrt(2)/2*(TRAIN_W + WAGONS_SPACE));
+    }
+
+    pthread_mutex_unlock(&train_par[i].mutex);
+
+}
+/*-------------------------------------------------------------------------*/
+void move_forward(int i, int j, int inc) {
+
+    // Se è appena uscito da un movimento diagonale, aggiorno la flag, il bitmap e 
+    // il numero del primo vagone che si sta ancora muovendo in diagonale
+    pthread_mutex_lock(&train_par[i].mutex);
+    if (train_par[i].wagons[j].diag_passed == true) {
+        train_par[i].wagons[j].diag_passed = false;
+        train_par[i].wagons[j].bmp = train_par[i].bmp[0];
+        if ( j == WAGONS - 1)   train_par[i].first_diagonal_wagon = 0;
+        else                train_par[i].first_diagonal_wagon ++;   
+    }
+    if (j == 0)     train_par[i].wagons[j].posx += inc;
+    else            train_par[i].wagons[j].posx = train_par[i].wagons[j-1].posx - (TRAIN_W + WAGONS_SPACE);
+    pthread_mutex_unlock(&train_par[i].mutex);
 }
 
 /*-------------------------------------------------------------------------*/

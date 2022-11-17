@@ -90,7 +90,7 @@ void time_add_ms (struct timespec *t, int ms)
 
 void time_copy(struct timespec *td, struct timespec ts)
 {
-	td->tv_sec = ts.tv_sec;
+	td->tv_sec  = ts.tv_sec;
 	td->tv_nsec = ts.tv_nsec;
 }
 
@@ -147,16 +147,21 @@ int		time_cmp(struct timespec t1, struct timespec t2) {
 //------------------------------------------------------------------------------
 // FUNZIONE deadline_miss
 //
-// Se c'è stato un deadline miss, aumenta il contatore del task
-// e da come valore in uscita 1
+// Se c'è stato un deadline miss, aumenta il contatore del taskId
 //------------------------------------------------------------------------------
 
-int		deadline_miss(int i) {
+int deadline_miss(int taskId) {
+// int 	deltaSec;
+// int 	deltaNsec;	
 struct 	timespec now;
 
 		clock_gettime(CLOCK_MONOTONIC, &now);
-		if (time_cmp(now, tp[i].dl) > 0) {
-			tp[i].dmiss++;
+		// deltaSec = tp[taskId].dl.tv_sec - now.tv_sec ;
+		// deltaNsec = tp[taskId].dl.tv_nsec - now.tv_nsec;
+		//printf("at: %ld sec %ld nsec ------ dl: %ld sec %ld nsec ------ ms dl: %d \n", tp[taskId].at.tv_sec, tp[taskId].at.tv_nsec, tp[taskId].dl.tv_sec, tp[taskId].dl.tv_nsec, tp[taskId].deadline);
+		// printf("DeltaS: %d    DeltaNsec: %d \n", deltaSec, deltaNsec);
+		if (time_cmp(now, tp[taskId].dl) > 0) {	
+			tp[taskId].dmiss ++;
 			return 1;
 		}
 		return 0;

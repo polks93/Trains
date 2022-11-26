@@ -242,7 +242,7 @@ void *station_manager(void *p);
  */
 void binary_assignment();
 
-void move_semaphore_queue();
+void move_semaphore_queue(int semId);
 
 void move_station_queue(int stationId);
 
@@ -284,7 +284,7 @@ void checkSemaphoreIn(int trainId, int semId, int semStateRequired);
  * Check the semaphore OUT semId state w.r.t the train trainId and
     changes the switch position to reach the required state semStateRequired.
  */
-void checkSemaphoreOut(int trainId, int semId, int semStateRequired);
+void checkSemaphoreOut();
 
 /**
  * Checks if the train is in the station of the binary it is moving on

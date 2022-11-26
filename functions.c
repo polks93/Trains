@@ -230,7 +230,7 @@ void initialize() {
         semaphores[i].sem               = create_bitmap(sem_g->w, sem_g->h);
         semaphores[i].trail_state       = TRAIL_OFF;
         semaphores[i].trail_angle_cnt   = 0;
-        semaphores[i].trail_angle_inc   = 0.01;
+        semaphores[i].trail_angle_inc   = 1;
         semaphores[i].move_queue        = false;
         blit(sem_g, semaphores[i].sem, 0, 0, 0, 0, sem_g->w, sem_g->h);
     }
@@ -558,6 +558,7 @@ void *station_manager(void *p){
 
             if (train_par[i].run == true){
 
+                checkStation(train_par[i].binary);
                 train_par[i].checked = false;
 
                 switch(train_par[i].binary){
@@ -584,8 +585,8 @@ void *station_manager(void *p){
                     break;
                 case(2):
                     // check semaforo
-                    //checkSemaphoreIn(i, 0, TRAIL_OFF);
-                    //checkSemaphoreIn(i, 1, TRAIL_OFF);
+                    checkSemaphoreIn(i, 0, TRAIL_OFF);
+                    checkSemaphoreIn(i, 1, TRAIL_OFF);
                     checkSemaphoreIn(i, 2, TRAIL_ON);
                     // check stazione
                     checkStation(i);
@@ -606,12 +607,13 @@ void *station_manager(void *p){
         }
 
         // GESTIONE CODE DEI SEMAFORI E DELLE STAZIONI
-        for (i = 0; i < STATIONS_NUM; i++){
-            if (station[i].move_queue == true)     move_station_queue(i);
+        for (int f = 0; f < STATIONS_NUM; f++){
+            if (station[f].move_queue == true)        move_station_queue(f);
         }
-
-        move_semaphore_queue();
-
+        for (int g = 0; g < SEMAPHORES_NUM; g++){
+            if (semaphores[g].move_queue == true)     move_semaphore_queue(g);
+        }
+        checkSemaphoreOut();
         if(deadline_miss(id))           printf("Deadline miss of station manager task \n");
         wait_for_activation(id);
     }
@@ -707,21 +709,256 @@ void binary_assignment(){
 //-------------------------------------------------------------------------------------------------------------------------
 void checkSemaphoreIn(int trainId, int semId, int SemRequiredState){
 
+    bool    sem_passed;
+    bool    semaphore_flag;
+    struct  timespec    now;
+    struct  timespec    leave_time;
+    int     posx;
+    int     xPointIn_sem;
+    int     xPointOut_sem;
+    int     train_pos_in_queue;
+
+    pthread_mutex_lock(&train_par[trainId].mutex);
+    posx            = train_par[trainId].posx;
+    sem_passed      = train_par[trainId].sem_passed[semId];
+    pthread_mutex_unlock(&train_par[trainId].mutex);
+
+
+    pthread_mutex_lock(&semaphores[semId].mutex);
+    xPointIn_sem       = semaphores[semId].xPointIn ;
+    xPointOut_sem      = semaphores[semId].xPointOut;
+    pthread_mutex_unlock(&semaphores[semId].mutex);
+
+        // Controllo se mi trovo nel range del semaforo
+    if (posx > xPointIn_sem && posx < xPointOut_sem  && sem_passed == false ){
+
+        // Eseguito solo una volta quando il semaforo diventa verde
+        if ((semaphores[semId].trail_state != SemRequiredState) ||
+            (semaphores[semId].status == false)){
+            
+            pthread_mutex_lock(&train_par[trainId].mutex);
+
+            // Flag per comunicare che il treno è al semaforo
+            train_par[trainId].semaphore_flag = true;
+
+            // Eseguito solo la prima volta che il treno entra in stazione
+            if (train_par[trainId].queue == false) {
+                train_par[trainId].queue = true;
+
+                // Salvo la posizione in coda del treno
+                train_par[trainId].pos_in_queue = semaphores[semId].queue;
+                
+                // Salvo la posizione in cui mi dovrò fermare
+                train_par[trainId].stop_x = semaphores[semId].xPointStop;
+                train_par[trainId].stop_id = semId;
+                train_par[trainId].stop_type = SEMAPHORE;
+
+                // Inserisco il treno in coda
+                semaphores[semId].queue_list[semaphores[semId].queue] = trainId;
+                semaphores[semId].queue        += 1;                     
+                semaphores[semId].xPointIn     -= TRAIN_SPACE;
+                semaphores[semId].xPointStop   -= TRAIN_SPACE;
+            }
+            
+            train_pos_in_queue=train_par[trainId].pos_in_queue;
+            pthread_mutex_unlock(&train_par[trainId].mutex);
+
+            if ((train_pos_in_queue == 0)) {
+                // Aggiorno la struttura della stazione
+                semaphores[semId].status = false;
+
+                if (SemRequiredState == TRAIL_ON) {
+                    semaphores[semId].trail_angle -= semaphores[semId].trail_angle_inc; 
+                    if (semaphores[semId].trail_angle == TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE ) {
+                        semaphores[semId].trail_state = TRAIL_ON;
+                        semaphores[semId].status = true;
+                    }
+                }
+                else if (SemRequiredState == TRAIL_OFF) {
+                    semaphores[semId].trail_angle += semaphores[semId].trail_angle_inc;
+                    if (semaphores[semId].trail_angle == TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE ) {
+                        semaphores[semId].trail_state = TRAIL_OFF;
+                        semaphores[semId].status = true;
+                    }
+                }                   
+            }
+        }
+        else {
+            semaphores[semId].status = true;
+            pthread_mutex_lock(&train_par[trainId].mutex);
+            train_par[trainId].semaphore_flag = false;
+            pthread_mutex_unlock(&train_par[trainId].mutex);
+            
+        }   
+    }
 }
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE checkSemaphoreOut
+// 
+// 
+//-------------------------------------------------------------------------------------------------------------------------
+void checkSemaphoreOut(){
+    // cerco il treno con il massimo della priorità tra i treni pronti per uscire dalla stazione
+    // assegno alla variabile bin il numero del binario che rispetta la condizione sopra
+    // faccio i vari casi in base al bin
+    int maxprioId = 0;
+    int maxprio = 0;
+    int bin = 0;
+    int t = 0;
+    bool train_found = false;
+    int     xPointIn_sem;
+    int     xPointOut_sem;
+
+    for (int i = 1; i < TMAX; i++){
+        if ((train_par[i].checked == true) && (train_par[i].pos_in_queue == 0)){
+            if(train_par[i].priority > maxprio){
+                maxprio = train_par[i].priority;
+                maxprioId = i;
+                train_found = true;
+            }
+        }
+    }
+    
+    if (train_found == true){
+        bin = train_par[maxprioId].binary;
+        t = abs(bin-5);
+        pthread_mutex_lock(&semaphores[t].mutex);
+        xPointIn_sem       = station[bin].xPointOut ;
+        xPointOut_sem      = semaphores[t].xPointOut;
+        pthread_mutex_unlock(&semaphores[t].mutex);
+        switch (bin){
+
+            case(0):
+                if ((train_par[maxprioId].posx >= xPointIn_sem) && (train_par[maxprioId].posx <= xPointOut_sem)){
+                    semaphores[4].status = false;
+                    semaphores[3].status = false;
+                    station[3].status = false;
+                };
+                semaphores[5].trail_angle += semaphores[5].trail_angle_inc;
+                if (semaphores[5].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE) {
+                    semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE;
+                    semaphores[5].status = true;    
+                }; 
+                if (train_par[maxprioId].posx > semaphores[bin].xPointOut){
+                    semaphores[4].status = true;
+                    semaphores[3].status = true;
+                    station[3].status = true;
+                };
+                break;
+            case(1):
+                if ((train_par[maxprioId].posx >= xPointIn_sem) && (train_par[maxprioId].posx <= xPointOut_sem)){
+                    semaphores[5].status = false;
+                    semaphores[3].status = false;
+                    station[3].status = false;
+                };
+                semaphores[4].trail_angle += semaphores[4].trail_angle_inc;
+                if (semaphores[4].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE) {
+                    semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE;
+                    semaphores[4].status = true;
+                }; 
+                semaphores[5].trail_angle -= semaphores[5].trail_angle_inc;
+                if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE) {
+                    semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
+                    semaphores[5].status = true;
+                };  
+                if (train_par[maxprioId].posx > semaphores[bin].xPointOut){
+                    semaphores[5].status = true;
+                    semaphores[3].status = true;
+                    station[3].status = true;
+                };
+                break;
+            case(2): 
+                if ((train_par[maxprioId].posx >= xPointIn_sem) && (train_par[maxprioId].posx <= xPointOut_sem)){
+                    semaphores[5].status = false;
+                    semaphores[4].status = false;
+                    station[3].status = false;
+                };
+                semaphores[3].trail_angle += semaphores[3].trail_angle_inc;
+                if (semaphores[3].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE) {
+                    semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE;
+                }; 
+                semaphores[4].trail_angle -= semaphores[4].trail_angle_inc;
+                if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE) {
+                    semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
+                }; 
+                semaphores[5].trail_angle -= semaphores[5].trail_angle_inc;
+                if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE) {
+                    semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
+                };  
+                if (train_par[maxprioId].posx > semaphores[bin].xPointOut){
+                    semaphores[5].status = true;
+                    semaphores[4].status = true;
+                    station[3].status = true;
+                };
+                break;
+            case(3):
+                // if ((train_par[maxprioId].posx >= station[bin].xPointIn) && (train_par[maxprioId].posx <= semaphores[bin].xPointOut)){
+                //     semaphores[5].status = false;
+                //     semaphores[4].status = false;
+                //     semaphores[3].status = false;
+                // };
+                semaphores[3].trail_angle -= semaphores[3].trail_angle_inc;
+                if (semaphores[3].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE) {
+                    semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
+                }; 
+                semaphores[4].trail_angle -= semaphores[4].trail_angle_inc;
+                if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE) {
+                    semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
+                }; 
+                semaphores[5].trail_angle -= semaphores[5].trail_angle_inc;
+                if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE) {
+                    semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE;
+                }; 
+                // if (train_par[maxprioId].posx > semaphores[bin].xPointOut ){
+                //     semaphores[5].status = true;
+                //     semaphores[4].status = true;
+                //     semaphores[3].status = true;
+                // };
+                break;          
+        }
+    
+
+    }
+
+}
+
+
+
+
+
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE move_semaphore_queue
 // 
 // 
 //-------------------------------------------------------------------------------------------------------------------------
-void move_semaphore_queue(){
-    int i;
+void move_semaphore_queue(int semId){
 
-        for (i = 0; i < SEMAPHORES_NUM; i++){
-            if (semaphores[i].move_queue ==  true){
-                semaphores[i].move_queue = false;
-                semaphores[i].queue --;
-            }
-        }
+    struct  timespec now;
+    int     i;
+    int     trainId;
+
+    // Legge l'istante iniziale
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    // Muove la coda 
+    for (i = 1; i <= semaphores[semId].queue; i++) {
+        semaphores[semId].queue_list[i-1] = semaphores[semId].queue_list[i];
+
+        trainId = semaphores[semId].queue_list[i-1];
+        pthread_mutex_lock(&train_par[trainId].mutex);
+        train_par[trainId].ready_to_go_flag = true;
+        pthread_mutex_unlock(&train_par[trainId].mutex);
+    }
+
+
+    semaphores[semId].move_queue   =  false;
+    semaphores[semId].xPointIn     += TRAIN_SPACE;
+    semaphores[semId].xPointStop   += TRAIN_SPACE;
+    semaphores[semId].queue        --;
+
+    // Dopo il tempo di attesa il semaforo torna rosso
+    // if (semaphores[i].queue > 0 && time_cmp(now, semaphores[i].t) == 1)   semaphores[i].status = false;
+      
 }
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE CheckStation
@@ -765,7 +1002,6 @@ void checkStation(int trainId) {
 
                 // Eseguito solo la prima volta che il treno entra in stazione
                 if (train_par[trainId].queue == false) {
-
                     // Salvo la posizione in coda del treno
                     train_par[trainId].pos_in_queue = station[stationId].queue;
                     

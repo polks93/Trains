@@ -207,6 +207,10 @@ int trail4_xPoints[4];
 int* trails_xPoints[4]; //vettore di puntatori a intero, contiene gli indirizzi di tutti i vettori sopra
 int trains_in_binary[STATIONS_NUM];
 
+/** Max prioriry train searching*/
+bool max_prio_train_found;
+int max_prio_train_id;
+
 /**
  * Initialization function.
  * 

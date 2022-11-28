@@ -112,7 +112,7 @@ struct station_struct{
     int                 queue_list[MAX_TRAINS_IN_QUEUE];
     float               trail_angle_cnt;
     float               trail_angle_inc;
-    struct              timespec    t;
+    struct              timespec    green_time;
     BITMAP              *sem;
     pthread_mutex_t     mutex;
 };
@@ -284,6 +284,7 @@ void move_forward(int i, int j, int inc);
 
 
 void checkSemaphoreIn(int trainId, int semId, int semStateRequired);
+
 /**
  * Check the semaphore OUT semId state w.r.t the train trainId and
     changes the switch position to reach the required state semStateRequired.

@@ -26,9 +26,6 @@ void initialize() {
     printf("Loading ... \n");
 
     // INIT MUTEX
-    // pthread_mutex_t     ready_trains_num_mutex          = PTHREAD_MUTEX_INITIALIZER;
-    // pthread_mutex_t     last_assigned_train_id_mutex    = PTHREAD_MUTEX_INITIALIZER;
-    // pthread_mutex_t     trains_in_binary_mutex          = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_init(&ready_trains_num_mutex,             NULL);
     pthread_mutex_init(&last_assigned_train_id_mutex,       NULL);
     pthread_mutex_init(&trains_in_binary_mutex,             NULL);
@@ -125,10 +122,10 @@ void initialize() {
 
     // INIZIALIZZAZIONE GRAFICA
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, W, WINDOW_H, 0, 0);
-    background = create_bitmap(W, H);
-    buffer = create_bitmap(W, H);
-    interface = create_bitmap(INTERFACE_W, INTERFACE_H);
-    interface_buffer = create_bitmap(INTERFACE_W, INTERFACE_H);
+    background          = create_bitmap(W, H);
+    buffer              = create_bitmap(W, H);
+    interface           = create_bitmap(INTERFACE_W, INTERFACE_H);
+    interface_buffer    = create_bitmap(INTERFACE_W, INTERFACE_H);
     clear_to_color(background, grey);
     clear_to_color(interface, grey);
     rectfill(background, 0, H-1, W-1, H-10, black);
@@ -136,76 +133,76 @@ void initialize() {
     // STRUTTURA PULSANTI
 
     // new random train
-    button[0].button_off = random_train_off;
-    button[0].button_on = random_train_on;
-    button[0].state = false;
-    button[0].x_min = 2*SPACE_BUTTONS;
-    button[0].x_max = 2*SPACE_BUTTONS + L_BUTTONS;
-    button[0].y_min = SPACE_BUTTONS;
-    button[0].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[0].button_off    = random_train_off;
+    button[0].button_on     = random_train_on;
+    button[0].state         = false;
+    button[0].x_min         = 2*SPACE_BUTTONS;
+    button[0].x_max         = 2*SPACE_BUTTONS + L_BUTTONS;
+    button[0].y_min         = SPACE_BUTTONS;
+    button[0].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // new hp train
-    button[1].button_off = hp_train_off;
-    button[1].button_on = hp_train_on;
-    button[1].state = false;
-    button[1].x_min = button[0].x_max + 2*SPACE_BUTTONS;
-    button[1].x_max = button[1].x_min + L_BUTTONS;
-    button[1].y_min = SPACE_BUTTONS;
-    button[1].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[1].button_off    = hp_train_off;
+    button[1].button_on     = hp_train_on;
+    button[1].state         = false;
+    button[1].x_min         = button[0].x_max + 2*SPACE_BUTTONS;
+    button[1].x_max         = button[1].x_min + L_BUTTONS;
+    button[1].y_min         = SPACE_BUTTONS;
+    button[1].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // new mp train
-    button[2].button_off = mp_train_off;
-    button[2].button_on = mp_train_on;
-    button[2].state = false;
-    button[2].x_min = button[1].x_max + 2*SPACE_BUTTONS;
-    button[2].x_max = button[2].x_min + L_BUTTONS;
-    button[2].y_min = SPACE_BUTTONS;
-    button[2].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[2].button_off    = mp_train_off;
+    button[2].button_on     = mp_train_on;
+    button[2].state         = false;
+    button[2].x_min         = button[1].x_max + 2*SPACE_BUTTONS;
+    button[2].x_max         = button[2].x_min + L_BUTTONS;
+    button[2].y_min         = SPACE_BUTTONS;
+    button[2].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // new lp train
-    button[3].button_off = lp_train_off;
-    button[3].button_on = lp_train_on;    
-    button[3].state = false;
-    button[3].x_min = button[2].x_max + 2*SPACE_BUTTONS;
-    button[3].x_max = button[3].x_min + L_BUTTONS;
-    button[3].y_min = SPACE_BUTTONS;
-    button[3].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[3].button_off    = lp_train_off;
+    button[3].button_on     = lp_train_on;    
+    button[3].state         = false;
+    button[3].x_min         = button[2].x_max + 2*SPACE_BUTTONS;
+    button[3].x_max         = button[3].x_min + L_BUTTONS;
+    button[3].y_min         = SPACE_BUTTONS;
+    button[3].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // train from dx
-    button[4].button_off = from_dx_off;
-    button[4].button_on = from_dx_on;    
-    button[4].state = false;
-    button[4].x_min = button[3].x_max + 2*SPACE_BUTTONS;
-    button[4].x_max = button[4].x_min + L_BUTTONS;
-    button[4].y_min = SPACE_BUTTONS;
-    button[4].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[4].button_off    = from_dx_off;
+    button[4].button_on     = from_dx_on;    
+    button[4].state         = false;
+    button[4].x_min         = button[3].x_max + 2*SPACE_BUTTONS;
+    button[4].x_max         = button[4].x_min + L_BUTTONS;
+    button[4].y_min         = SPACE_BUTTONS;
+    button[4].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // train from sx
-    button[5].button_off = from_sx_off;
-    button[5].button_on = from_sx_on;    
-    button[5].state = false;
-    button[5].x_min = button[4].x_max + 2*SPACE_BUTTONS;
-    button[5].x_max = button[5].x_min + L_BUTTONS;
-    button[5].y_min = SPACE_BUTTONS;
-    button[5].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[5].button_off    = from_sx_off;
+    button[5].button_on     = from_sx_on;    
+    button[5].state         = false;
+    button[5].x_min         = button[4].x_max + 2*SPACE_BUTTONS;
+    button[5].x_max         = button[5].x_min + L_BUTTONS;
+    button[5].y_min         = SPACE_BUTTONS;
+    button[5].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // random direction
-    button[6].button_off = rnd_direction_off;
-    button[6].button_on = rnd_direction_on;    
-    button[6].state = false;
-    button[6].x_min = button[5].x_max + 2*SPACE_BUTTONS;
-    button[6].x_max = button[6].x_min + L_BUTTONS;
-    button[6].y_min = SPACE_BUTTONS;
-    button[6].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[6].button_off    = rnd_direction_off;
+    button[6].button_on     = rnd_direction_on;    
+    button[6].state         = false;
+    button[6].x_min         = button[5].x_max + 2*SPACE_BUTTONS;
+    button[6].x_max         = button[6].x_min + L_BUTTONS;
+    button[6].y_min         = SPACE_BUTTONS;
+    button[6].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // close program
-    button[7].button_off = close_program_off;
-    button[7].button_on = close_program_on;
-    button[7].state = false;
-    button[7].x_min = INTERFACE_W - 2*SPACE_BUTTONS - L_BUTTONS;
-    button[7].x_max = button[7].x_min + L_BUTTONS;
-    button[7].y_min = SPACE_BUTTONS;
-    button[7].y_max = SPACE_BUTTONS + L_BUTTONS;
+    button[7].button_off    = close_program_off;
+    button[7].button_on     = close_program_on;
+    button[7].state         = false;
+    button[7].x_min         = INTERFACE_W - 2*SPACE_BUTTONS - L_BUTTONS;
+    button[7].x_max         = button[7].x_min + L_BUTTONS;
+    button[7].y_min         = SPACE_BUTTONS;
+    button[7].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // Disegno i pulsanti sul buffer
     //for (i = 0; i < N_BUTTONS; i++)        blit(button[i].button_off, interface, 0, 0, button[i].x_min, button[i].y_min, L_BUTTONS, L_BUTTONS);
@@ -533,6 +530,7 @@ int check_button(int x, int y){
             }  
     }
     if(pressed) return i;
+    // DA SISTEMARE QUESTO RETURN
     else        return 12;
 }
 
@@ -627,7 +625,7 @@ void *graphics(void *p){
         // FRECCE DIREZIONI
         pthread_mutex_lock(&ASSIGNED_DIRECTION_MUTEX);
         pthread_mutex_lock(&user_direction_mutex);
-        
+
         if (ASSIGNED_DIRECTION == false) {
             stretch_sprite(buffer, green_arrow_dx, 40, H/2 - SPACE - 20, arrow_w, arrow_h);
             stretch_sprite(buffer, green_arrow_sx, W - 40 - arrow_w, H/2 + SPACE - 20 + arrow_h, arrow_w, arrow_h);
@@ -696,6 +694,7 @@ void *graphics(void *p){
         wait_for_activation(id);
     }
 
+    // DA AGGIUNGERE TUTTI I BITMPAS DA ELIMINARE
     destroy_bitmap(buffer);
     destroy_bitmap(background);
     destroy_bitmap(sem_r);
@@ -1431,7 +1430,6 @@ void move_station_queue(int stationId){
         break;
     }
 
-
     pthread_mutex_unlock(&station[stationId].mutex);
 }
 
@@ -1447,6 +1445,7 @@ void *train(void *p) {
     bool    first_of_queue;
     bool    semaphore_flag;
     bool    binary_assigned;
+    bool    stop_status;
     int     id;
     int     k;
     int     j;
@@ -1484,26 +1483,6 @@ void *train(void *p) {
         wait_for_activation(id);
     }
     
-    // // CHECK COLLISIONI IN INGRESSO ALLA STAZIONE
-    // if(id != 1) {
-    //     pthread_mutex_lock(&train_par[id-1].mutex);
-    //     previous_train_pos_x = train_par[id-1].posx;
-    //     pthread_mutex_unlock(&train_par[id-1].mutex);
-
-    //     while (previous_train_pos_x < 2*TRAIN_W*WAGONS && EXIT == false) {
-
-    //         pthread_mutex_lock(&train_par[id-1].mutex);
-    //         previous_train_pos_x = train_par[id-1].posx;
-    //         pthread_mutex_unlock(&train_par[id-1].mutex);
-
-    //     if (deadline_miss(id)) {
-    //         printf("Deadline miss of train task %d \n", id);
-    //         total_train_dl++;
-    //     }
-    //         wait_for_activation(id);
-    //     }
-    // }
-
     // CHECK COLLISIONI IN INGRESSO ALLA STAZIONE
     pthread_mutex_lock(&train_par[id].mutex);
     direction   = train_par[id].direction;
@@ -1536,6 +1515,11 @@ void *train(void *p) {
             default:
                 break;
         }
+
+        if (deadline_miss(id)) {
+            printf("Deadline miss of train task %d \n", id);
+            total_train_dl ++;
+        }
         wait_for_activation(id);
     }
 
@@ -1543,11 +1527,11 @@ void *train(void *p) {
     // TRENO PRONTO 
     // Salvo il locale i parametri iniziali del treno
     pthread_mutex_lock(&train_par[id].mutex);
-    train_par[id].run = true;
-    posx        = train_par[id].posx;
-    stop_x      = train_par[id].stop_x;
-    direction   = train_par[id].direction;
-    binary      = train_par[id].binary;
+    train_par[id].run   = true;
+    posx                = train_par[id].posx;
+    stop_x              = train_par[id].stop_x;
+    direction           = train_par[id].direction;
+    binary              = train_par[id].binary;
     pthread_mutex_unlock(&train_par[id].mutex);
 
     // INIT MACCHINA A STATI
@@ -1652,28 +1636,43 @@ void *train(void *p) {
                 break;
 
             case(STOP):
-                // FERMATA AL SEMAFORO
-                // In base a tipo e ID controllo quando il sem diventa verde per ripartire
-                if (stop_type == STATION && station[stop_id].status == true) {
+                
+                if (stop_type == STATION) {
+                    pthread_mutex_lock(&station[stop_id].mutex);
+                    stop_status = station[stop_id].status;
+                    pthread_mutex_unlock(&station[stop_id].mutex);
 
-                    next_state = SPEED_UP;
+                    if (stop_status == true) {
+                        next_state = SPEED_UP;
+                        
+                        pthread_mutex_lock(&train_par[id].mutex);
+                        train_par[id].queue = false;
+                        pthread_mutex_unlock(&train_par[id].mutex);
 
-                    pthread_mutex_lock(&train_par[id].mutex);
-                    train_par[id].queue = false;
-                    pthread_mutex_unlock(&train_par[id].mutex);
-                    
-                    station[stop_id].move_queue = true;
+                        pthread_mutex_lock(&station[stop_id].mutex);
+                        station[stop_id].move_queue = true;
+                        pthread_mutex_unlock(&station[stop_id].mutex);
+                    }
                 }
 
-                else if (stop_type == SEMAPHORE && semaphores[stop_id].status == true) {
+                else if (stop_type == SEMAPHORE) {
 
-                    next_state = SPEED_UP;
+                    pthread_mutex_lock(&semaphores[stop_id].mutex);
+                    stop_status = semaphores[stop_id].status;
+                    pthread_mutex_unlock(&semaphores[stop_id].mutex); 
+                    
+                    if (stop_status == true) {
 
-                    pthread_mutex_lock(&train_par[id].mutex);
-                    train_par[id].queue = false;
-                    pthread_mutex_unlock(&train_par[id].mutex);
+                        next_state = SPEED_UP;
 
-                    semaphores[stop_id].move_queue = true;
+                        pthread_mutex_lock(&train_par[id].mutex);
+                        train_par[id].queue = false;
+                        pthread_mutex_unlock(&train_par[id].mutex);
+
+                        pthread_mutex_lock(&semaphores[stop_id].mutex);
+                        semaphores[stop_id].move_queue = true;
+                        pthread_mutex_unlock(&semaphores[stop_id].mutex); 
+                    }
                 }
                 break;
 
@@ -1733,8 +1732,9 @@ void *train(void *p) {
 //---------------------------------------------------------------------------
 void set_train_parameters(int i) {
     
-    int random_num;
-    int j;
+    int                 random_num;
+    int                 j;
+    struct timespec     now;
 
     pthread_mutex_t     train_mux = PTHREAD_MUTEX_INITIALIZER;
 
@@ -1744,7 +1744,8 @@ void set_train_parameters(int i) {
     pthread_mutex_unlock(&ready_trains_num_mutex);
 
     // Seme per la funzione rand()
-    srand(time(NULL)+ i);             
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    srand(now.tv_nsec);             
     random_num = rand();
 
     // Inizializzo la struttura del treno

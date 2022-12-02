@@ -117,6 +117,12 @@ void initialize() {
     close_program_off = load_bitmap("img/buttons/exit_off.bmp", NULL);
     close_program_on = load_bitmap("img/buttons/exit_on.bmp", NULL);
 
+    // BITMAPS FRECCE
+    green_arrow_dx = load_bitmap("img/arrows/green_arrow_dx.bmp", NULL);
+    green_arrow_sx = load_bitmap("img/arrows/green_arrow_sx.bmp", NULL);
+    red_arrow_dx = load_bitmap("img/arrows/red_arrow_dx.bmp", NULL);
+    red_arrow_sx = load_bitmap("img/arrows/red_arrow_sx.bmp", NULL);
+
     // INIZIALIZZAZIONE GRAFICA
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, W, WINDOW_H, 0, 0);
     background = create_bitmap(W, H);
@@ -202,7 +208,7 @@ void initialize() {
     button[7].y_max = SPACE_BUTTONS + L_BUTTONS;
 
     // Disegno i pulsanti sul buffer
-    for (i = 0; i < N_BUTTONS; i++)        blit(button[i].button_off, interface, 0, 0, button[i].x_min, button[i].y_min, L_BUTTONS, L_BUTTONS);
+    //for (i = 0; i < N_BUTTONS; i++)        blit(button[i].button_off, interface, 0, 0, button[i].x_min, button[i].y_min, L_BUTTONS, L_BUTTONS);
 
     // POSIZIONE DELLE INTERSEZIONI TRA I BINARI
     // binario 1
@@ -355,7 +361,7 @@ void initialize() {
     textout_ex(background, font, str, (i+1)*(TRAIN_W+WAGONS_SPACE), 2*TRAIN_W + 1, blue, -1);
     sprintf(str, " : LOW PRIORITY TRAIN");
     textout_ex(background, font, str, (i+1)*(TRAIN_W+WAGONS_SPACE), 3*TRAIN_W + 1, green, -1);
-    
+
     // CREAZIONE TASK
     task_create(graphics,           GRAPHIC_TASK_ID,            GRAPHIC_TASK_PERIOD,            GRAPHIC_TASK_DL,            GRAPHIC_TASK_PRIO);               
     task_create(station_manager,    STATION_MANAGER_TASK_ID,    STATION_MANAGER_TASK_PERIOD,    STATION_MANAGER_TASK_DL,    STATION_MANAGER_TASK_PRIO);   
@@ -541,6 +547,8 @@ void *graphics(void *p){
     int id;
     int sem_w;
     int sem_h;
+    int arrow_w;
+    int arrow_h;
     int i;
     int j;
     char str[50];
@@ -551,9 +559,11 @@ void *graphics(void *p){
     id = get_task_id(p);
     set_activation(id);
 
-    sem_w = sem_r->w*SEM_SIZE_FACTOR ;
-    sem_h = sem_r->h*SEM_SIZE_FACTOR ;
-    
+    sem_w = sem_r->w*SEM_SIZE_FACTOR;
+    sem_h = sem_r->h*SEM_SIZE_FACTOR;
+    arrow_w = green_arrow_dx->w*ARROW_SIZE_FACTOR;
+    arrow_h = green_arrow_dx->h*ARROW_SIZE_FACTOR;
+
     while(EXIT == false) {
 
         blit(background, buffer, 0, 0, 0, 0, background->w, background->h);
@@ -613,6 +623,28 @@ void *graphics(void *p){
             }
             pthread_mutex_unlock(&train_par[i].mutex);
         }
+
+        // FRECCE DIREZIONI
+        pthread_mutex_lock(&ASSIGNED_DIRECTION_MUTEX);
+        pthread_mutex_lock(&user_direction_mutex);
+        
+        if (ASSIGNED_DIRECTION == false) {
+            stretch_sprite(buffer, green_arrow_dx, 40, H/2 - SPACE - 20, arrow_w, arrow_h);
+            stretch_sprite(buffer, green_arrow_sx, W - 40 - arrow_w, H/2 + SPACE - 20 + arrow_h, arrow_w, arrow_h);
+        }
+
+        else if (user_direction == FROM_DX) {
+            stretch_sprite(buffer, red_arrow_dx, 40, H/2 - SPACE - 20, arrow_w, arrow_h);
+            stretch_sprite(buffer, green_arrow_sx, W - 40 - arrow_w, H/2 + SPACE - 20 + arrow_h, arrow_w, arrow_h);
+        }
+
+        else {
+            stretch_sprite(buffer, green_arrow_dx, 40, H/2 - SPACE - 20, arrow_w, arrow_h);
+            stretch_sprite(buffer, red_arrow_sx, W - 40 - arrow_w, H/2 + SPACE - 20 + arrow_h, arrow_w, arrow_h);
+        }
+
+        pthread_mutex_unlock(&user_direction_mutex);
+        pthread_mutex_unlock(&ASSIGNED_DIRECTION_MUTEX);
 
         // INTERFACCIA
         for (i = 0; i < N_BUTTONS ; i++) {

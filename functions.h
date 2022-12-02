@@ -53,6 +53,7 @@
 #define     STATIONS_NUM                        8
 #define     MAX_TRAINS_IN_QUEUE                 10       
 #define     SEM_SIZE_FACTOR                     0.1
+#define     ARROW_SIZE_FACTOR                   0.5
 #define     TRAIL_W                             30
 #define     TRAIL_H                             2
 #define     TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE     -32
@@ -220,6 +221,10 @@ BITMAP *from_sx_on;
 BITMAP *from_sx_off;
 BITMAP *rnd_direction_on;
 BITMAP *rnd_direction_off;
+BITMAP *green_arrow_dx;
+BITMAP *green_arrow_sx;
+BITMAP *red_arrow_dx;
+BITMAP *red_arrow_sx;
 
 /** Array di strutture delle stazoioni centrali */
 struct station_struct   station[STATIONS_NUM];

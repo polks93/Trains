@@ -17,10 +17,11 @@
 
 void initialize() {
     
-    int i;
-    int x0, x1, x2, x3, y0, y1, y2, y3;
-    int col, black, red, blue, green, orange, white, grey;
-    int trail_diag;
+    int     i;
+    int     x0, x1, x2, x3, y0, y1, y2, y3;
+    int     col, black, red, blue, green, orange, white, grey;
+    int     trail_diag;
+    char    str[50];
 
     printf("Loading ... \n");
 
@@ -336,6 +337,19 @@ void initialize() {
         line(background, x3, y1, x3 - TRAIL_W, y1, grey);
         line(background, x3, y2, x3 - TRAIL_W, y2, grey);
     }
+
+    // DISEGNO LEGENDA SU SCHERMO
+    for (i = 0; i < WAGONS; i++) {
+    draw_sprite(background, train_bmp[2].train1, (i + 1) * (TRAIN_W + WAGONS_SPACE), TRAIN_W);
+    draw_sprite(background, train_bmp[1].train1, (i + 1) * (TRAIN_W + WAGONS_SPACE), 2*TRAIN_W);
+    draw_sprite(background, train_bmp[0].train1, (i + 1) * (TRAIN_W + WAGONS_SPACE), 3*TRAIN_W);
+    }
+    sprintf(str, " : HIGH PRIORITY TRAIN");
+    textout_ex(background, font, str, (i+1)*(TRAIN_W+WAGONS_SPACE), TRAIN_W + 1, red, -1);
+    sprintf(str, " : MEDIUM PRIORITY TRAIN");
+    textout_ex(background, font, str, (i+1)*(TRAIN_W+WAGONS_SPACE), 2*TRAIN_W + 1, blue, -1);
+    sprintf(str, " : LOW PRIORITY TRAIN");
+    textout_ex(background, font, str, (i+1)*(TRAIN_W+WAGONS_SPACE), 3*TRAIN_W + 1, green, -1);
     
     // CREAZIONE TASK
     task_create(graphics,           GRAPHIC_TASK_ID,            GRAPHIC_TASK_PERIOD,            GRAPHIC_TASK_DL,            GRAPHIC_TASK_PRIO);               

@@ -31,7 +31,7 @@
 #define     INTERFACE_H                         90
 #define     INTERFACE_W                         1280
 #define     WINDOW_H                            H + INTERFACE_H
-#define     N_BUTTONS                           10
+#define     N_BUTTONS                           8
 #define     L_BUTTONS                           50
 #define     SPACE_BUTTONS                       20
 #define     SPACE                               H/9            
@@ -74,9 +74,31 @@ enum trail_states{
     TRAIL_OFF = 0 
 };
 
+enum train_direction{
+    FROM_SX = 0,
+    FROM_DX = 1
+};
+
+enum train_priority{
+    HIGH_PRIO = 3,
+    MEDIUM_PRIO = 2,
+    LOW_PRIO = 1
+};
+
 enum type_of_stop{
     SEMAPHORE   = 0,
     STATION     = 1
+};
+
+enum buttons_names{
+    NEW_RND_TRAIN = 0,
+    NEW_HP_TRAIN = 1,
+    NEW_MP_TRAIN = 2,
+    NEW_LP_TRAIN = 3,
+    TRAIN_FROM_DX = 4,
+    TRAIN_FROM_SX = 5,
+    RANDOM_DIRECTION = 6,
+    CLOSE_PROGRAM = 7
 };
 
 struct train_bitmap {
@@ -153,14 +175,18 @@ struct train_parameters {
 // Variabili generiche
 bool    EXIT;
 bool    EXIT_COMMAND;
+bool    ASSIGNED_DIRECTION;
 int     ready_trains_num;
 int     last_assigned_train_id;
 int     total_train_dl;
+int     user_direction;
 
 // Mutex
 pthread_mutex_t ready_trains_num_mutex;
 pthread_mutex_t last_assigned_train_id_mutex;
 pthread_mutex_t trains_in_binary_mutex;
+pthread_mutex_t ASSIGNED_DIRECTION_MUTEX;
+pthread_mutex_t user_direction_mutex;
 
 /** Bitmaps */
 BITMAP *background;
@@ -183,6 +209,12 @@ BITMAP *lp_train_on;
 BITMAP *lp_train_off;
 BITMAP *close_program_on;
 BITMAP *close_program_off;
+BITMAP *from_dx_on;
+BITMAP *from_dx_off;
+BITMAP *from_sx_on;
+BITMAP *from_sx_off;
+BITMAP *rnd_direction_on;
+BITMAP *rnd_direction_off;
 
 /** Array di strutture delle stazoioni centrali */
 struct station_struct   station[STATIONS_NUM];
@@ -204,7 +236,7 @@ int trail1_xPoints[4];  //vettore di 4 interi che mi conterrà le x dei 4 punti 
 int trail2_xPoints[4];
 int trail3_xPoints[4];
 int trail4_xPoints[4];  
-int* trails_xPoints[4]; //vettore di puntatori a intero, contiene gli indirizzi di tutti i vettori sopra
+int* trails_xPoints[8]; //vettore di puntatori a intero, contiene gli indirizzi di tutti i vettori sopra
 int trains_in_binary[STATIONS_NUM];
 
 /** Max prioriry train searching*/
@@ -307,5 +339,11 @@ void exit_all();
  * premuto uno, altrimenti da come risultato 0
  */
 char get_scancode();
+
+/**
+ * Restituisce il segno dell'intero
+ *         
+ */
+int sign(int x);
 
 #endif

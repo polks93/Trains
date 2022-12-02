@@ -46,6 +46,7 @@
 #define     SLOW_DOWN_SPACE                     4*TRAIN_W
 #define     MAX_VEL                             150
 #define     MAX_ACC                             100
+#define     MS_BETWEEN_TRAINS                   1000
 
 // SEMAFORI, STAZIONI E BINARI
 #define     SEMAPHORES_NUM                      12
@@ -172,7 +173,7 @@ struct train_parameters {
     BITMAP              *bmp[3];
 };
 
-// Variabili generiche
+// Variabili globali
 bool    EXIT;
 bool    EXIT_COMMAND;
 bool    ASSIGNED_DIRECTION;
@@ -180,13 +181,17 @@ int     ready_trains_num;
 int     last_assigned_train_id;
 int     total_train_dl;
 int     user_direction;
+struct  timespec    last_assigned_train_from_sx;
+struct  timespec    last_assigned_train_from_dx;
 
-// Mutex
+// Mutex delle variabili globali
+pthread_mutex_t ASSIGNED_DIRECTION_MUTEX;
 pthread_mutex_t ready_trains_num_mutex;
 pthread_mutex_t last_assigned_train_id_mutex;
 pthread_mutex_t trains_in_binary_mutex;
-pthread_mutex_t ASSIGNED_DIRECTION_MUTEX;
 pthread_mutex_t user_direction_mutex;
+pthread_mutex_t last_assigned_train_from_dx_mutex;
+pthread_mutex_t last_assigned_train_from_sx_mutex;
 
 /** Bitmaps */
 BITMAP *background;

@@ -29,27 +29,32 @@ void initialize() {
     // pthread_mutex_t     ready_trains_num_mutex          = PTHREAD_MUTEX_INITIALIZER;
     // pthread_mutex_t     last_assigned_train_id_mutex    = PTHREAD_MUTEX_INITIALIZER;
     // pthread_mutex_t     trains_in_binary_mutex          = PTHREAD_MUTEX_INITIALIZER;
-    pthread_mutex_init(&ready_trains_num_mutex,         NULL);
-    pthread_mutex_init(&last_assigned_train_id_mutex,   NULL);
-    pthread_mutex_init(&trains_in_binary_mutex,         NULL);
-    pthread_mutex_init(&ASSIGNED_DIRECTION_MUTEX,       NULL);
-    pthread_mutex_init(&user_direction_mutex,           NULL);
+    pthread_mutex_init(&ready_trains_num_mutex,             NULL);
+    pthread_mutex_init(&last_assigned_train_id_mutex,       NULL);
+    pthread_mutex_init(&trains_in_binary_mutex,             NULL);
+    pthread_mutex_init(&ASSIGNED_DIRECTION_MUTEX,           NULL);
+    pthread_mutex_init(&user_direction_mutex,               NULL);
+    pthread_mutex_init(&last_assigned_train_from_dx_mutex,  NULL);
+    pthread_mutex_init(&last_assigned_train_from_sx_mutex,  NULL);
 
     for (i = 0; i < STATIONS_NUM; i++)      pthread_mutex_init(&station[i].mutex,       NULL);
     for (i = 0; i < SEMAPHORES_NUM; i++)    pthread_mutex_init(&semaphores[i].mutex,    NULL);
 
     // INIZIALIZZAZIONE VARIABILI GLOBALI
-    EXIT                    = false;
-    EXIT_COMMAND            = false;
-    ASSIGNED_DIRECTION      = false;
-    max_prio_train_found    = false;
-    ready_trains_num        = 0;
-    last_assigned_train_id  = 0;
-    total_train_dl          = 0;
-    user_direction          = FROM_DX;
+    EXIT                                = false;
+    EXIT_COMMAND                        = false;
+    ASSIGNED_DIRECTION                  = false;
+    max_prio_train_found                = false;
+    ready_trains_num                    = 0;
+    last_assigned_train_id              = 0;
+    total_train_dl                      = 0;
+    user_direction                      = FROM_DX;
+    last_assigned_train_from_dx.tv_sec  = 0;
+    last_assigned_train_from_dx.tv_nsec = 0;
+    last_assigned_train_from_sx.tv_sec  = 0;
+    last_assigned_train_from_sx.tv_nsec = 0;
 
     for (i = 0; i < STATIONS_NUM; i++)      trains_in_binary[i] = 0;
-
 
     // INIZIALIZZAZIONE ALLEGRO
     allegro_init();
@@ -1405,22 +1410,24 @@ void move_station_queue(int stationId){
 //-------------------------------------------------------------------------------------------------------------------------
 
 void *train(void *p) {
+    struct  timespec    now;
+    struct  timespec    ready_time;
     bool    first_of_queue;
     bool    semaphore_flag;
     bool    binary_assigned;
     int     id;
+    int     k;
+    int     j;
     int     direction;
     int     binary;
     int     stop_id;
     int     stop_type;
-    int     j;
     int     posx;
     int     stop_x;
     int     previous_train_pos_x;
     int     curr_state;
     int     prev_state;
     int     next_state;
-    int     K;
     int     acc;
     float   vel;
 
@@ -1445,25 +1452,61 @@ void *train(void *p) {
         wait_for_activation(id);
     }
     
+    // // CHECK COLLISIONI IN INGRESSO ALLA STAZIONE
+    // if(id != 1) {
+    //     pthread_mutex_lock(&train_par[id-1].mutex);
+    //     previous_train_pos_x = train_par[id-1].posx;
+    //     pthread_mutex_unlock(&train_par[id-1].mutex);
+
+    //     while (previous_train_pos_x < 2*TRAIN_W*WAGONS && EXIT == false) {
+
+    //         pthread_mutex_lock(&train_par[id-1].mutex);
+    //         previous_train_pos_x = train_par[id-1].posx;
+    //         pthread_mutex_unlock(&train_par[id-1].mutex);
+
+    //     if (deadline_miss(id)) {
+    //         printf("Deadline miss of train task %d \n", id);
+    //         total_train_dl++;
+    //     }
+    //         wait_for_activation(id);
+    //     }
+    // }
+
     // CHECK COLLISIONI IN INGRESSO ALLA STAZIONE
-    if(id != 1) {
-        pthread_mutex_lock(&train_par[id-1].mutex);
-        previous_train_pos_x = train_par[id-1].posx;
-        pthread_mutex_unlock(&train_par[id-1].mutex);
+    pthread_mutex_lock(&train_par[id].mutex);
+    direction   = train_par[id].direction;
+    pthread_mutex_unlock(&train_par[id].mutex);
 
-        while (previous_train_pos_x < 2*TRAIN_W*WAGONS && EXIT == false) {
+    k = 0;
 
-            pthread_mutex_lock(&train_par[id-1].mutex);
-            previous_train_pos_x = train_par[id-1].posx;
-            pthread_mutex_unlock(&train_par[id-1].mutex);
+    while (k < 1 && EXIT == false) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        switch(direction) {
 
-        if (deadline_miss(id)) {
-            printf("Deadline miss of train task %d \n", id);
-            total_train_dl++;
+            case FROM_DX:
+            pthread_mutex_lock(&last_assigned_train_from_dx_mutex);
+            time_copy(&ready_time, last_assigned_train_from_dx);
+            time_add_ms(&ready_time, MS_BETWEEN_TRAINS);
+            k = time_cmp(now, ready_time);
+            if ( k == 1)    time_copy(&last_assigned_train_from_dx, now);
+            pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
+                break;
+            
+            case FROM_SX:
+            pthread_mutex_lock(&last_assigned_train_from_sx_mutex);
+            time_copy(&ready_time, last_assigned_train_from_sx);
+            time_add_ms(&ready_time, MS_BETWEEN_TRAINS);
+            k = time_cmp(now, ready_time);
+            if ( k == 1)    time_copy(&last_assigned_train_from_sx, now);
+            pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);
+                break;
+            
+            default:
+                break;
         }
-            wait_for_activation(id);
-        }
+        wait_for_activation(id);
     }
+
 
     // TRENO PRONTO 
     // Salvo il locale i parametri iniziali del treno

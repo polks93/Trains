@@ -614,7 +614,7 @@ void *graphics(void *p){
             pthread_mutex_lock(&train_par[i].mutex);
             if (train_par[i].run == true){
                 // DEBUG GRAFICO
-                line(buffer, train_par[i].stop_x, train_par[i].wagons[0].posy + TRAIN_H, train_par[i].stop_x, train_par[i].wagons[0].posy - TRAIN_H,(0,0,0));
+                // line(buffer, train_par[i].stop_x, train_par[i].wagons[0].posy + TRAIN_H, train_par[i].stop_x, train_par[i].wagons[0].posy - TRAIN_H,(0,0,0));
                 for (j = 0; j < WAGONS; j++){
                     draw_sprite(buffer, train_par[i].wagons[j].bmp, train_par[i].wagons[j].posx, train_par[i].wagons[j].posy);
                 }
@@ -686,17 +686,17 @@ void *graphics(void *p){
         sprintf(str, "TOTAL TRAIN TASK DL: %d", total_train_dl);
         textout_ex(interface_buffer, font, str, 800, 70, (0,0,0), -1);
 
-        int k = 0;
-        sprintf(sem_number, "%d", k);
-        line(buffer, semaphores[k].xPointStop, 0,   semaphores[k].xPointStop, H, (0,0,0));
-        textout_ex(buffer, font, sem_number, semaphores[k].xPointStop + 10, semaphores[k].yPointDraw - 10, (0,25,0), -1);
-        sprintf(sem_number, "%d", k+1);
-        line(buffer, semaphores[k+1].xPointStop, 0, semaphores[k+1].xPointStop, H, (0,0,0));
-        textout_ex(buffer, font, sem_number, semaphores[k+1].xPointStop + 10, semaphores[k+1].yPointDraw - 10, (0,25,0), -1);
-        sprintf(sem_number, "%d", k+2);
-        line(buffer, semaphores[k+2].xPointStop, 0, semaphores[k+2].xPointStop, H, (0,0,0));
-        textout_ex(buffer, font, sem_number, semaphores[k+2].xPointStop + 10, semaphores[k+2].yPointDraw - 10, (0,25,0), -1);
-        sprintf(sem_number, "%d", k+3);
+        // int k = 0;
+        // sprintf(sem_number, "%d", k);
+        // line(buffer, semaphores[k].xPointStop, 0,   semaphores[k].xPointStop, H, (0,0,0));
+        // textout_ex(buffer, font, sem_number, semaphores[k].xPointStop + 10, semaphores[k].yPointDraw - 10, (0,25,0), -1);
+        // sprintf(sem_number, "%d", k+1);
+        // line(buffer, semaphores[k+1].xPointStop, 0, semaphores[k+1].xPointStop, H, (0,0,0));
+        // textout_ex(buffer, font, sem_number, semaphores[k+1].xPointStop + 10, semaphores[k+1].yPointDraw - 10, (0,25,0), -1);
+        // sprintf(sem_number, "%d", k+2);
+        // line(buffer, semaphores[k+2].xPointStop, 0, semaphores[k+2].xPointStop, H, (0,0,0));
+        // textout_ex(buffer, font, sem_number, semaphores[k+2].xPointStop + 10, semaphores[k+2].yPointDraw - 10, (0,25,0), -1);
+        // sprintf(sem_number, "%d", k+3);
         // line(buffer, semaphores[k+3].xPointStop, 0, semaphores[k+3].xPointStop, H, (0,0,0));
         // textout_ex(buffer, font, sem_number, semaphores[k+3].xPointStop + 10, semaphores[k+3].yPointDraw + 10, (0,25,0), -1);
 

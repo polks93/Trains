@@ -30,3 +30,4 @@ Dopo la stazione
 
 idem per gli altri semafori
 
+Quando il primo treno deve portare lo switch in un'altra posizione e anche il successivo deve fare la stessa cosa, il secondo treno non passa da move_semaphore_queue!!!!

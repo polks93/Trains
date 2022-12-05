@@ -191,7 +191,7 @@ int		get_dmiss(int i) {
 //------------------------------------------------------------------------------
 // FUNZIONE ptask_exit
 //
-// chiude tutti i task da 1 a n
+// chiude il task attivo
 //------------------------------------------------------------------------------
 
 void	ptask_exit(int i) {
@@ -210,5 +210,4 @@ void 	ptask_exit_all() {
 	for (i = 0; i <= NMAX; i++) {
 		pthread_cancel(tid[i]);
 	}
-	printf("All tasks succesfully closed! Goodbye core dump :) \n");
 }

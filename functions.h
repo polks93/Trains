@@ -56,10 +56,15 @@
 #define     ARROW_SIZE_FACTOR                   0.5
 #define     TRAIL_W                             30
 #define     TRAIL_H                             2
-#define     TRAIL_UP_BIN_IN_SWITCH_ON_ANGLE     -32
-#define     TRAIL_UP_BIN_IN_SWITCH_OFF_ANGLE    0
-#define     TRAIL_UP_BIN_OUT_SWITCH_ON_ANGLE    -96
-#define     TRAIL_UP_BIN_OUT_SWITCH_OFF_ANGLE   -128
+#define     TRAIL_UP_BIN_IN_SWITCH_ON           -32
+#define     TRAIL_UP_BIN_IN_SWITCH_OFF          0
+#define     TRAIL_UP_BIN_OUT_SWITCH_ON          -96
+#define     TRAIL_UP_BIN_OUT_SWITCH_OFF         -128
+#define     TRAIL_DOWN_BIN_IN_SWITCH_ON         -160
+#define     TRAIL_DOWN_BIN_IN_SWITCH_OFF        -128
+#define     TRAIL_DOWN_BIN_OUT_SWITCH_ON        32
+#define     TRAIL_DOWN_BIN_OUT_SWITCH_OFF       0
+#define     TRAIL_ANGLE_INC                     4
 #define     STOP_TIME                           1000  
 
 enum train_states{
@@ -134,6 +139,7 @@ struct station_struct{
     int                 trail_state;
     int                 trail_angle;
     int                 queue_list[MAX_TRAINS_IN_QUEUE];
+    int                 trail_list[MAX_TRAINS_IN_QUEUE];
     float               trail_angle_cnt;
     float               trail_angle_inc;
     struct              timespec    green_time;
@@ -288,7 +294,9 @@ void *station_manager(void *p);
  */
 void binary_assignment();
 
-void move_semaphore_queue(int semId);
+void manual_binary_assignment(int binary);
+
+void move_semaphore_queue_in(int semId);
 
 void move_station_queue(int stationId);
 
@@ -323,7 +331,6 @@ void move_diag_down(int i, int j, int inc);
  * Move the train along straight trail.
  */
 void move_forward(int i, int j, int inc);
-
 
 void checkSemaphoreIn(int trainId, int semId, int semStateRequired);
 

@@ -846,7 +846,7 @@ void *station_manager(void *p){
         }
 
 
-        // checkSemaphoreOut();
+        checkSemaphoreOut();
         
         if(deadline_miss(id))           printf("Deadline miss of station manager task \n");
         wait_for_activation(id);
@@ -1312,25 +1312,34 @@ void checkSemaphoreOut(){
     int     xPointOut_sem;
 
     if (!max_prio_train_found) {
-        printf("searching max prio train\n");
         for (int i = 1; i < TMAX; i++){
             if (train_par[i].run){
-                printf("train %d on binary %d is checked: %d pos_queue %d\n",i, train_par[i].binary, train_par[i].checked, train_par[i].pos_in_queue);  
-                printf("station %d queue: %d\n", train_par[i].binary, station[train_par[i].binary].queue); 
-                if ((train_par[i].checked == true) && (train_par[i].pos_in_queue == 0)){
+                printf("train %d on binary %d is waiting: %d pos_queue %d\n",i, train_par[i].binary, train_par[i].station_flag, train_par[i].pos_in_queue);  
+                // printf("station %d queue: %d\n", train_par[i].binary, station[train_par[i].binary].queue); 
+                // if ((train_par[i].station_passed[train_par[i].binary] == true) && (train_par[i].pos_in_queue == 0)){
+                if ((train_par[i].station_flag == true) && (train_par[i].pos_in_queue == 0)) {
                     if(train_par[i].priority > maxprio){
                         maxprio = train_par[i].priority;
                         max_prio_train_id = i;
-                        max_prio_train_found = true;
                     }
                 }
+                // else{
+                //     printf("no station are passed or first in queue\n");
+                // }
             }
         }
         printf("max prio is %d\n", max_prio_train_id);
-        if (station[train_par[max_prio_train_id].binary].status == false) {
-            station[train_par[max_prio_train_id].binary].status = true;
+    
+        if (train_par[max_prio_train_id].station_passed[train_par[max_prio_train_id].binary] == true){
+            if (station[train_par[max_prio_train_id].binary].status == false) {
+                station[train_par[max_prio_train_id].binary].status = true;
+                max_prio_train_found = true;
+                train_par[max_prio_train_id].station_flag = false;
+            }
         }
     }
+
+    
     
     maxprioId = max_prio_train_id;
     if (max_prio_train_found == true){
@@ -1349,7 +1358,7 @@ void checkSemaphoreOut(){
                     semaphores[3].status = false;
                     station[3].status = false;
                 };
-                semaphores[5].trail_angle += semaphores[5].trail_angle_inc;
+                semaphores[5].trail_angle += TRAIL_ANGLE_INC;
                 if (semaphores[5].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {
                     semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
                 }; 
@@ -1358,7 +1367,6 @@ void checkSemaphoreOut(){
                     semaphores[3].status = true;
                     station[3].status = true;
                     max_prio_train_found = false;
-                    train_par[maxprioId].checked = false;
                 };
                 break;
             case(1):
@@ -1368,11 +1376,11 @@ void checkSemaphoreOut(){
                     semaphores[3].status = false;
                     station[3].status = false;
                 }
-                semaphores[4].trail_angle += semaphores[4].trail_angle_inc;
+                semaphores[4].trail_angle += TRAIL_ANGLE_INC;
                 if (semaphores[4].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {
                     semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
                 }; 
-                semaphores[5].trail_angle -= semaphores[5].trail_angle_inc;
+                semaphores[5].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
                 };  
@@ -1381,7 +1389,6 @@ void checkSemaphoreOut(){
                     semaphores[3].status = true;
                     station[3].status = true;
                     max_prio_train_found = false;
-                    train_par[maxprioId].checked = false;
                 };
                 break;
             case(2): 
@@ -1390,15 +1397,15 @@ void checkSemaphoreOut(){
                     semaphores[4].status = false;
                     station[3].status = false;
                 };
-                semaphores[3].trail_angle += semaphores[3].trail_angle_inc;
+                semaphores[3].trail_angle += TRAIL_ANGLE_INC;
                 if (semaphores[3].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {
                     semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
                 }; 
-                semaphores[4].trail_angle -= semaphores[4].trail_angle_inc;
+                semaphores[4].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
                 }; 
-                semaphores[5].trail_angle -= semaphores[5].trail_angle_inc;
+                semaphores[5].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
                 };  
@@ -1407,7 +1414,6 @@ void checkSemaphoreOut(){
                     semaphores[4].status = true;
                     station[3].status = true;
                     max_prio_train_found = false;
-                    train_par[maxprioId].checked = false;
                 };
                 break;
             case(3):
@@ -1416,15 +1422,15 @@ void checkSemaphoreOut(){
                     semaphores[4].status = false;
                     semaphores[3].status = false;
                 };
-                semaphores[3].trail_angle -= semaphores[3].trail_angle_inc;
+                semaphores[3].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[3].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
                 }; 
-                semaphores[4].trail_angle -= semaphores[4].trail_angle_inc;
+                semaphores[4].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
                 }; 
-                semaphores[5].trail_angle -= semaphores[5].trail_angle_inc;
+                semaphores[5].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
                 }; 
@@ -1433,7 +1439,6 @@ void checkSemaphoreOut(){
                     semaphores[4].status = true;
                     semaphores[3].status = true;
                     max_prio_train_found = false;
-                    train_par[maxprioId].checked = false;
                 };
                 break;          
         }
@@ -1503,7 +1508,7 @@ void checkStation(int trainId) {
 
                 // Flag per comunicare che il treno è in stazione
                 train_par[trainId].semaphore_flag = true;
-
+                train_par[trainId].station_flag = true;
                 // Eseguito la prima volta e ogni volta che la coda si muove
                 if (train_par[trainId].queue == false) {
                     pthread_mutex_lock(&station[stationId].mutex);
@@ -1564,13 +1569,13 @@ void checkStation(int trainId) {
                 time_copy(&leave_time, station[stationId].green_time);
                 pthread_mutex_unlock(&station[stationId].mutex);
 
+
                 if (time_cmp(now, leave_time) == 1) {
                     
                     // Il semaforo diventa verde e segno l'istante in cui deve tornare rosso se c'è una coda
-                    pthread_mutex_lock(&station[stationId].mutex);
-                    station[stationId].status = true;
-                    pthread_mutex_unlock(&station[stationId].mutex);
-
+                    // pthread_mutex_lock(&station[stationId].mutex);
+                    // station[stationId].status = true;
+                    // pthread_mutex_unlock(&station[stationId].mutex);
                     pthread_mutex_lock(&train_par[trainId].mutex);
                     train_par[trainId].station_passed[stationId] = true;
                     pthread_mutex_unlock(&train_par[trainId].mutex);
@@ -1967,6 +1972,7 @@ void set_train_parameters(int i) {
     train_par[i].binary_assigned    = false; 
     train_par[i].ready_to_go_flag   = false; 
     train_par[i].semaphore_flag     = false; 
+    train_par[i].station_flag       = false;
     train_par[i].checked            = false;
     train_par[i].queue              = false;
     train_par[i].binary_occupied    = false;

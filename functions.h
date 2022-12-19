@@ -257,8 +257,12 @@ int* trails_xPoints[8]; //vettore di puntatori a intero, contiene gli indirizzi 
 int trains_in_binary[STATIONS_NUM];
 
 /** Max prioriry train searching*/
-bool max_prio_train_found;
-int max_prio_train_id;
+bool max_prio_train_found_up;
+bool max_prio_train_found_down;
+int max_prio_train_id_up;
+int max_prio_train_id_down;
+// bool isTrainUp;
+// bool isTrainDown;
 
 /**
  * Initialization function.
@@ -333,14 +337,25 @@ void move_diag_down(int i, int j, int inc);
  */
 void move_forward(int i, int j, int inc);
 
+/**
+ * Check the semaphore IN semId state w.r.t the train trainId and
+    changes the switch position to reach the required state semStateRequired.
+ */
+
 void checkSemaphoreIn(int trainId, int semId, int semStateRequired);
 
 /**
  * Check the semaphore OUT semId state w.r.t the train trainId and
     changes the switch position to reach the required state semStateRequired.
  */
-void checkSemaphoreOut();
+void checkSemaphoreOutUp();
 
+/**
+ * Check the semaphore OUT semId state w.r.t the train trainId and
+    changes the switch position to reach the required state semStateRequired.
+ */
+
+void checkSemaphoreOutDown();
 /**
  * Checks if the train is in the station of the binary it is moving on
  */

@@ -20,4 +20,8 @@ This application requires Allegro4 to run. The suggested way to install is:
 
 `sudo bin/main`
 
+## Clear history
+
+`make clean`
+
 *Note: superuser privileges are needed to create real-time threads.*

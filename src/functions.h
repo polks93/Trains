@@ -46,7 +46,8 @@
 #define     SLOW_DOWN_SPACE                     4*TRAIN_W
 #define     MAX_VEL                             150
 #define     MAX_ACC                             100
-#define     MS_BETWEEN_TRAINS                   1000
+#define     MIN_MS_BETWEEN_TRAINS               1000
+#define     MAX_MS_BETWEEN_TRAINS               3000
 
 // SEMAFORI, STAZIONI E BINARI
 #define     SEMAPHORES_NUM                      12
@@ -64,8 +65,8 @@
 #define     TRAIL_DOWN_BIN_IN_SWITCH_OFF        -128
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_ON        32
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_OFF       0
-#define     TRAIL_ANGLE_INC                     1
-#define     STOP_TIME                           5000  
+#define     TRAIL_ANGLE_INC                     4
+#define     STOP_TIME                           1000  
 
 enum train_states{
     GO_FAST     = 0,    //0: -> andatura normale

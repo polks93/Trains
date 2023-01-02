@@ -37,7 +37,7 @@ void initialize() {
     for (i = 0; i < STATIONS_NUM; i++)      pthread_mutex_init(&station[i].mutex,       NULL);
     for (i = 0; i < SEMAPHORES_NUM; i++)    pthread_mutex_init(&semaphores[i].mutex,    NULL);
 
-    // INIZIALIZZAZIONE VARIABILI GLOBALI
+    // INIT VARIABILI GLOBALI
     EXIT                                = false;
     EXIT_COMMAND                        = false;
     ASSIGNED_DIRECTION                  = false;
@@ -54,7 +54,7 @@ void initialize() {
 
     for (i = 0; i < STATIONS_NUM; i++)      trains_in_binary[i] = 0;
 
-    // INIZIALIZZAZIONE ALLEGRO
+    // INIT ALLEGRO
     allegro_init();
     install_keyboard();
     install_mouse();
@@ -121,7 +121,7 @@ void initialize() {
     red_arrow_dx = load_bitmap("img/arrows/red_arrow_dx.bmp", NULL);
     red_arrow_sx = load_bitmap("img/arrows/red_arrow_sx.bmp", NULL);
 
-    // INIZIALIZZAZIONE GRAFICA
+    // INIT GRAFICA
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, W, WINDOW_H, 0, 0);
     background          = create_bitmap(W, H);
     buffer              = create_bitmap(W, H);
@@ -204,9 +204,6 @@ void initialize() {
     button[7].x_max         = button[7].x_min + L_BUTTONS;
     button[7].y_min         = SPACE_BUTTONS;
     button[7].y_max         = SPACE_BUTTONS + L_BUTTONS;
-
-    // Disegno i pulsanti sul buffer
-    //for (i = 0; i < N_BUTTONS; i++)        blit(button[i].button_off, interface, 0, 0, button[i].x_min, button[i].y_min, L_BUTTONS, L_BUTTONS);
 
     // POSIZIONE DELLE INTERSEZIONI TRA I BINARI
     // binario 1
@@ -375,14 +372,17 @@ void initialize() {
 // Gestisce mouse e tastiera 
 //-------------------------------------------------------------------------------------------------------------------------
 void    *user_task(void *p) {
-    char scan;
-    int id;
-    int i, j;
-    int mbutton;
-    int x;
-    int y;
-    int pressed_button;
-    
+
+    char    scan;
+    int     id;
+    int     i, j;
+    int     mbutton;
+    int     x;
+    int     y;
+    int     pressed_button;
+    struct  timespec    now;
+    struct  timespec    last_assigned_train;
+
     id = get_task_id(p);
     set_activation(id);
     i = 1;
@@ -401,27 +401,27 @@ void    *user_task(void *p) {
 
                 case NEW_RND_TRAIN:
                     if (i == TMAX ) i = 1;
-                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO); 
                     i++;
                     break;
                 
                 case NEW_HP_TRAIN:
                     if (i == TMAX ) i = 1;
-                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO); 
                     train_par[i].priority = 3;
                     i++;
                     break;
                     
                 case NEW_MP_TRAIN:
                     if (i == TMAX ) i = 1;
-                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO); 
                     train_par[i].priority = 2;
                     i++;
                     break;
                 
                 case NEW_LP_TRAIN:
                     if (i == TMAX ) i = 1;
-                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
+                    task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO); 
                     train_par[i].priority = 1;
                     i++;
                     break;
@@ -491,7 +491,7 @@ void    *user_task(void *p) {
 
             case KEY_SPACE:
                 if (i == TMAX ) i = 1;
-                task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PERIOD); 
+                task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO); 
                 i++;
                 break;
 
@@ -503,9 +503,28 @@ void    *user_task(void *p) {
                 break;
         }
         
-        // PARTE 3: genera un treno random dopo un tot di tempo
-        // DA FARE
+        // PARTE 3: genera un treno random dopo 3 secondi che non viene generato un treno
+        pthread_mutex_lock(&last_assigned_train_from_dx_mutex);
+        pthread_mutex_lock(&last_assigned_train_from_sx_mutex);
 
+        if (time_cmp(last_assigned_train_from_dx, last_assigned_train_from_sx) > 0) {
+            time_copy(&last_assigned_train, last_assigned_train_from_dx);
+        }
+        else {
+            time_copy(&last_assigned_train, last_assigned_train_from_sx);
+        }
+
+        pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
+        pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);
+
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        time_add_ms(&last_assigned_train, MAX_MS_BETWEEN_TRAINS);
+
+        if (time_cmp(now, last_assigned_train) > 0) {
+            if (i == TMAX) i = 1;
+            task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO);
+            i++;
+        }
 
     if(deadline_miss(id))           printf("Deadline miss of user task \n");
     wait_for_activation(id);
@@ -531,8 +550,8 @@ int check_button(int x, int y){
             }  
     }
     if(pressed) return i;
-    // DA SISTEMARE QUESTO RETURN
-    else        return 12;
+
+    else        return  N_BUTTONS;
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
@@ -740,7 +759,6 @@ void *station_manager(void *p){
     int     id;
     int     i;
     int     j;
-    struct  timespec now;
 
     id = get_task_id(p);
     set_activation(id);
@@ -845,9 +863,9 @@ void *station_manager(void *p){
 
             if (trail_queue > 0)    move_semaphore_queue_in(i);
         }
+
         checkSemaphoreOutUp();
         checkSemaphoreOutDown();
-
 
         if(deadline_miss(id))           printf("Deadline miss of station manager task \n");
         wait_for_activation(id);
@@ -1857,7 +1875,7 @@ void *train(void *p) {
             case FROM_DX:
             pthread_mutex_lock(&last_assigned_train_from_dx_mutex);
             time_copy(&ready_time, last_assigned_train_from_dx);
-            time_add_ms(&ready_time, MS_BETWEEN_TRAINS);
+            time_add_ms(&ready_time, MIN_MS_BETWEEN_TRAINS);
             k = time_cmp(now, ready_time);
             if ( k == 1)    time_copy(&last_assigned_train_from_dx, now);
             pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
@@ -1866,7 +1884,7 @@ void *train(void *p) {
             case FROM_SX:
             pthread_mutex_lock(&last_assigned_train_from_sx_mutex);
             time_copy(&ready_time, last_assigned_train_from_sx);
-            time_add_ms(&ready_time, MS_BETWEEN_TRAINS);
+            time_add_ms(&ready_time, MIN_MS_BETWEEN_TRAINS);
             k = time_cmp(now, ready_time);
             if ( k == 1)    time_copy(&last_assigned_train_from_sx, now);
             pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);

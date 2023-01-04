@@ -66,7 +66,7 @@
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_ON        32
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_OFF       0
 #define     TRAIL_ANGLE_INC                     4
-#define     STOP_TIME                           1000  
+#define     STOP_TIME                           2000  
 
 enum train_states{
     GO_FAST     = 0,    //0: -> andatura normale
@@ -143,7 +143,7 @@ struct station_struct{
     int                 trail_list[MAX_TRAINS_IN_QUEUE];
     float               trail_angle_cnt;
     float               trail_angle_inc;
-    struct              timespec    green_time;
+    // struct              timespec    green_time;
     BITMAP              *sem;
     pthread_mutex_t     mutex;
 };
@@ -182,25 +182,46 @@ struct train_parameters {
     BITMAP              *bmp[3];
 };
 
-// Variabili globali
+// VARIABILI GLOBALI
 bool    EXIT;
 bool    EXIT_COMMAND;
 bool    ASSIGNED_DIRECTION;
+bool    INIT_RED_TIME_SX;
+bool    INIT_RED_TIME_DX;
+bool    MOVE_TRAILS_SX;
+bool    MOVE_TRAILS_DX;
+bool    READY_TO_GO_SX;
+bool    READY_TO_GO_DX;
 int     ready_trains_num;
 int     last_assigned_train_id;
 int     total_train_dl;
 int     user_direction;
+int     max_prio_train_sx;
+int     max_prio_train_dx;
 struct  timespec    last_assigned_train_from_sx;
 struct  timespec    last_assigned_train_from_dx;
+struct  timespec    last_red_time_sx;
+struct  timespec    last_red_time_dx;
+
 
 // Mutex delle variabili globali
 pthread_mutex_t ASSIGNED_DIRECTION_MUTEX;
+pthread_mutex_t INIT_RED_TIME_SX_MUTEX;
+pthread_mutex_t INIT_RED_TIME_DX_MUTEX;
+pthread_mutex_t MOVE_TRAILS_SX_MUTEX;
+pthread_mutex_t MOVE_TRAILS_DX_MUTEX;
+pthread_mutex_t READY_TO_GO_SX_MUTEX;
+pthread_mutex_t READY_TO_GO_DX_MUTEX;
 pthread_mutex_t ready_trains_num_mutex;
 pthread_mutex_t last_assigned_train_id_mutex;
 pthread_mutex_t trains_in_binary_mutex;
 pthread_mutex_t user_direction_mutex;
 pthread_mutex_t last_assigned_train_from_dx_mutex;
 pthread_mutex_t last_assigned_train_from_sx_mutex;
+pthread_mutex_t max_prio_train_sx_mutex;
+pthread_mutex_t max_prio_train_dx_mutex;
+pthread_mutex_t last_red_time_sx_mutex;
+pthread_mutex_t last_red_time_dx_mutex;
 
 /** Bitmaps */
 BITMAP *background;
@@ -257,13 +278,6 @@ int trail4_xPoints[4];
 int* trails_xPoints[8]; //vettore di puntatori a intero, contiene gli indirizzi di tutti i vettori sopra
 int trains_in_binary[STATIONS_NUM];
 
-/** Max prioriry train searching*/
-bool max_prio_train_found_up;
-bool max_prio_train_found_down;
-int max_prio_train_id_up;
-int max_prio_train_id_down;
-// bool isTrainUp;
-// bool isTrainDown;
 
 /**
  * Initialization function.
@@ -349,8 +363,10 @@ void checkSemaphoreIn(int trainId, int semId, int semStateRequired);
  * Check the semaphore OUT semId state w.r.t the train trainId and
     changes the switch position to reach the required state semStateRequired.
  */
-void checkSemaphoreOutUp();
 
+void stationOutSx();
+
+void stationOutDx();
 /**
  * Check the semaphore OUT semId state w.r.t the train trainId and
     changes the switch position to reach the required state semStateRequired.

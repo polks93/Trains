@@ -33,6 +33,17 @@ void initialize() {
     pthread_mutex_init(&user_direction_mutex,               NULL);
     pthread_mutex_init(&last_assigned_train_from_dx_mutex,  NULL);
     pthread_mutex_init(&last_assigned_train_from_sx_mutex,  NULL);
+    pthread_mutex_init(&INIT_RED_TIME_SX_MUTEX,             NULL);
+    pthread_mutex_init(&INIT_RED_TIME_DX_MUTEX,             NULL);
+    pthread_mutex_init(&last_red_time_sx_mutex,             NULL);
+    pthread_mutex_init(&last_red_time_dx_mutex,             NULL);
+    pthread_mutex_init(&MOVE_TRAILS_SX_MUTEX,               NULL);
+    pthread_mutex_init(&MOVE_TRAILS_DX_MUTEX,               NULL);
+    pthread_mutex_init(&READY_TO_GO_SX_MUTEX,               NULL);
+    pthread_mutex_init(&READY_TO_GO_DX_MUTEX,               NULL);
+    pthread_mutex_init(&max_prio_train_sx_mutex,            NULL);
+    pthread_mutex_init(&max_prio_train_dx_mutex,            NULL);
+
 
     for (i = 0; i < STATIONS_NUM; i++)      pthread_mutex_init(&station[i].mutex,       NULL);
     for (i = 0; i < SEMAPHORES_NUM; i++)    pthread_mutex_init(&semaphores[i].mutex,    NULL);
@@ -41,8 +52,12 @@ void initialize() {
     EXIT                                = false;
     EXIT_COMMAND                        = false;
     ASSIGNED_DIRECTION                  = false;
-    max_prio_train_found_up             = false;
-    max_prio_train_found_down           = false;
+    INIT_RED_TIME_SX                    = false;
+    INIT_RED_TIME_DX                    = false;
+    MOVE_TRAILS_SX                      = false;
+    MOVE_TRAILS_DX                      = false;
+    READY_TO_GO_SX                      = true;
+    READY_TO_GO_DX                      = true;
     ready_trains_num                    = 0;
     last_assigned_train_id              = 0;
     total_train_dl                      = 0;
@@ -51,6 +66,8 @@ void initialize() {
     last_assigned_train_from_dx.tv_nsec = 0;
     last_assigned_train_from_sx.tv_sec  = 0;
     last_assigned_train_from_sx.tv_nsec = 0;
+    max_prio_train_sx               = 0;
+    max_prio_train_dx               = 0;
 
     for (i = 0; i < STATIONS_NUM; i++)      trains_in_binary[i] = 0;
 
@@ -504,27 +521,27 @@ void    *user_task(void *p) {
         }
         
         // PARTE 3: genera un treno random dopo 3 secondi che non viene generato un treno
-        pthread_mutex_lock(&last_assigned_train_from_dx_mutex);
-        pthread_mutex_lock(&last_assigned_train_from_sx_mutex);
+        // pthread_mutex_lock(&last_assigned_train_from_dx_mutex);
+        // pthread_mutex_lock(&last_assigned_train_from_sx_mutex);
 
-        if (time_cmp(last_assigned_train_from_dx, last_assigned_train_from_sx) > 0) {
-            time_copy(&last_assigned_train, last_assigned_train_from_dx);
-        }
-        else {
-            time_copy(&last_assigned_train, last_assigned_train_from_sx);
-        }
+        // if (time_cmp(last_assigned_train_from_dx, last_assigned_train_from_sx) > 0) {
+        //     time_copy(&last_assigned_train, last_assigned_train_from_dx);
+        // }
+        // else {
+        //     time_copy(&last_assigned_train, last_assigned_train_from_sx);
+        // }
 
-        pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
-        pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);
+        // pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
+        // pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);
 
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        time_add_ms(&last_assigned_train, MAX_MS_BETWEEN_TRAINS);
+        // clock_gettime(CLOCK_MONOTONIC, &now);
+        // time_add_ms(&last_assigned_train, MAX_MS_BETWEEN_TRAINS);
 
-        if (time_cmp(now, last_assigned_train) > 0) {
-            if (i == TMAX) i = 1;
-            task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO);
-            i++;
-        }
+        // if (time_cmp(now, last_assigned_train) > 0) {
+        //     if (i == TMAX) i = 1;
+        //     task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO);
+        //     i++;
+        // }
 
     if(deadline_miss(id))           printf("Deadline miss of user task \n");
     wait_for_activation(id);
@@ -671,22 +688,22 @@ void *graphics(void *p){
         }
 
         // DEBUG GRAFICO
-        sprintf(str, "Queue: %d", trains_in_binary[0]);
-        textout_ex(buffer, font, str, 550, 1.2*SPACE, (0,0,0),-1);
-        sprintf(str, "Queue: %d", trains_in_binary[1]);
-        textout_ex(buffer, font, str, 550, 2.2*SPACE, (0,0,0),-1);
-        sprintf(str, "Queue: %d", trains_in_binary[2]);
-        textout_ex(buffer, font, str, 550, 3.2*SPACE, (0,0,0),-1);
-        sprintf(str, "Queue: %d", trains_in_binary[3]);
-        textout_ex(buffer, font, str, 550, 4.2*SPACE, (0,0,0),-1);
-        sprintf(str, "Queue: %d", trains_in_binary[4]);
-        textout_ex(buffer, font, str, 650, 5.2*SPACE, (0,0,0),-1);
-        sprintf(str, "Queue: %d", trains_in_binary[5]);
-        textout_ex(buffer, font, str, 650, 6.2*SPACE, (0,0,0),-1);
-        sprintf(str, "Queue: %d", trains_in_binary[6]);
-        textout_ex(buffer, font, str, 650, 7.2*SPACE, (0,0,0),-1);
-        sprintf(str, "Queue: %d", trains_in_binary[7]);
-        textout_ex(buffer, font, str, 650, 8.2*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[0], station[0].queue_list[0], station[0].queue_list[1], station[0].queue_list[2]);
+        textout_ex(buffer, font, str, 550, 1.3*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[1], station[1].queue_list[0], station[1].queue_list[1], station[1].queue_list[2]);
+        textout_ex(buffer, font, str, 550, 2.3*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[2], station[2].queue_list[0], station[2].queue_list[1], station[2].queue_list[2]);
+        textout_ex(buffer, font, str, 550, 3.3*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[3], station[3].queue_list[0], station[3].queue_list[1], station[3].queue_list[2]);
+        textout_ex(buffer, font, str, 550, 4.3*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[4], station[4].queue_list[0], station[4].queue_list[1], station[4].queue_list[2]);
+        textout_ex(buffer, font, str, 650, 5.3*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[5], station[5].queue_list[0], station[5].queue_list[1], station[5].queue_list[2]);
+        textout_ex(buffer, font, str, 650, 6.3*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[6], station[6].queue_list[0], station[6].queue_list[1], station[6].queue_list[2]);
+        textout_ex(buffer, font, str, 650, 7.3*SPACE, (0,0,0),-1);
+        sprintf(str, "Queue: %d List: %d %d %d", trains_in_binary[7], station[7].queue_list[0], station[7].queue_list[1], station[7].queue_list[2]);
+        textout_ex(buffer, font, str, 650, 8.3*SPACE, (0,0,0),-1);
 
         sprintf(str, "Queue: %d", semaphores[0].queue);
         textout_ex(buffer, font, str, semaphores[0].xPointDraw, H/2, (0,0,0),-1);
@@ -863,9 +880,10 @@ void *station_manager(void *p){
 
             if (trail_queue > 0)    move_semaphore_queue_in(i);
         }
-
-        checkSemaphoreOutUp();
-        checkSemaphoreOutDown();
+        stationOutSx();
+        stationOutDx();
+        //checkSemaphoreOutUp();
+        //checkSemaphoreOutDown();
 
         if(deadline_miss(id))           printf("Deadline miss of station manager task \n");
         wait_for_activation(id);
@@ -1089,17 +1107,17 @@ void manual_binary_assignment(int binary) {
 //-------------------------------------------------------------------------------------------------------------------------
 void checkSemaphoreIn(int trainId, int semId, int SemRequiredState){
 
-    bool                sem_status;
-    bool                checked;
-    bool                sem_passed;
-    bool                semaphore_flag;
-    bool                train_in_sem;
-    bool                first_of_queue;
-    int                 posx;
-    int                 xPointIn;
-    int                 xPointOut;
-    int                 direction;
-    int                 trail_state;
+    bool    sem_status;
+    bool    checked;
+    bool    sem_passed;
+    bool    semaphore_flag;
+    bool    train_in_sem;
+    bool    first_of_queue;
+    int     posx;
+    int     xPointIn;
+    int     xPointOut;
+    int     direction;
+    int     trail_state;
 
     pthread_mutex_lock(&train_par[trainId].mutex);
     posx            = train_par[trainId].posx;
@@ -1313,308 +1331,573 @@ void move_semaphore_queue_in(int semId) {
     }
 
 }
-//-------------------------------------------------------------------------------------------------------------------------
-// FUNZIONE checkSemaphoreOutUp
-// 
-// 
-//-------------------------------------------------------------------------------------------------------------------------
-void checkSemaphoreOutUp(){
-    // cerco il treno con il massimo della priorità tra i treni pronti per uscire dalla stazione
-    // assegno alla variabile bin il numero del binario che rispetta la condizione sopra
-    // faccio i vari casi in base al bin
-    int maxprioId = 0;
-    int maxprio = 0;
-    int bin = 0;
-    int t = 0;
-    // bool train_found = false;
-    int xPointIn_sem_up;
-    int xPointOut_sem_up;
 
-    if (!max_prio_train_found_up) {
-        for (int i = 1; i < TMAX; i++){
-            if (train_par[i].run && train_par[i].binary <= 3){
-                printf("train %d on binary %d is waiting: %d pos_queue %d\n",i, train_par[i].binary, train_par[i].station_flag, train_par[i].pos_in_queue);  
-                // printf("station %d queue: %d\n", train_par[i].binary, station[train_par[i].binary].queue); 
-                // if ((train_par[i].station_passed[train_par[i].binary] == true) && (train_par[i].pos_in_queue == 0)){
-                if ((train_par[i].station_flag == true) && (train_par[i].pos_in_queue == 0)) {
-                    if(train_par[i].priority > maxprio){
-                        maxprio = train_par[i].priority;
-                        max_prio_train_id_up = i;
-                    }
-                }
-                // else{
-                //     printf("no station are passed or first in queue\n");
-                // }
-            }
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE stationOutSx
+// 
+// 
+//-------------------------------------------------------------------------------------------------------------------------
+void stationOutSx() {
+    bool    train_found;
+    bool    ready_to_go;
+    bool    init_red_time;
+    bool    station_status;
+    bool    another_station_waiting;
+    bool    move_trails;
+    int     train_id;
+    int     max_priority_train_id;
+    int     priority;
+    int     binary;
+    int     max_priority_train_bin;
+    int     max_priority;
+    int     i;
+    int     bin;
+    int     posx;
+    struct  timespec    now;
+    struct  timespec    leave_time;
+
+    ready_to_go             = false;
+    train_found             = false;
+    another_station_waiting = false;
+
+    max_priority            = 0;
+    max_priority_train_bin  = 0;
+
+    pthread_mutex_lock(&INIT_RED_TIME_SX_MUTEX);
+    init_red_time = INIT_RED_TIME_SX;
+    pthread_mutex_unlock(&INIT_RED_TIME_SX_MUTEX);
+
+    if (init_red_time == true) {
+
+        pthread_mutex_lock(&last_red_time_sx_mutex);
+        time_copy(&leave_time, last_red_time_sx);
+        pthread_mutex_unlock(&last_red_time_sx_mutex);
+
+        time_add_ms(&leave_time, STOP_TIME);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+
+        pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+        if (time_cmp(now, leave_time) > 0 && READY_TO_GO_SX == true) {
+            ready_to_go = true;
         }
-        printf("max prio up is %d\n", max_prio_train_id_up);
-    
-        if (train_par[max_prio_train_id_up].station_passed[train_par[max_prio_train_id_up].binary] == true){
-            if (station[train_par[max_prio_train_id_up].binary].status == false) {
-                station[train_par[max_prio_train_id_up].binary].status = true;
-                max_prio_train_found_up = true;
-                train_par[max_prio_train_id_up].station_flag = false;
-            }
-        }
+        pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
     }
 
-    
-    
-    maxprioId = max_prio_train_id_up;
-    if (max_prio_train_found_up == true){
-        bin = train_par[maxprioId].binary;
-        t = abs(bin-5);
-        pthread_mutex_lock(&semaphores[t].mutex);
-        xPointIn_sem_up       = station[bin].xPointOut ;
-        xPointOut_sem_up      = semaphores[t].xPointOut;
-        pthread_mutex_unlock(&semaphores[t].mutex);
+    if (ready_to_go == true) {
 
-        switch (bin){
+        for (i = 0; i <= 3; i++) {
+            
+            pthread_mutex_lock(&station[i].mutex);
+            train_id = station[i].queue_list[0];
+            pthread_mutex_unlock(&station[i].mutex);
 
-            case(0):
-                if ((train_par[maxprioId].posx >= xPointIn_sem_up) && (train_par[maxprioId].posx <= xPointOut_sem_up)){
-                    semaphores[4].status = false;
-                    semaphores[3].status = false;
-                    station[3].status = false;
-                };
-                semaphores[5].trail_angle += TRAIL_ANGLE_INC;
-                if (semaphores[5].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {
-                    semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
-                }; 
-                if (train_par[maxprioId].posx >= W){
-                    semaphores[4].status = true;
-                    semaphores[3].status = true;
-                    station[3].status = true;
-                    max_prio_train_found_up = false;
-                };
+            pthread_mutex_lock(&train_par[train_id].mutex);
+            priority    = train_par[train_id].priority;
+            binary      = train_par[train_id].binary;
+            pthread_mutex_unlock(&train_par[train_id].mutex);
+
+            if (priority > max_priority) {
+
+                max_priority            = priority;
+                max_priority_train_id   = train_id;
+                max_priority_train_bin  = binary;
+                train_found             = true;
+            }
+            else if (priority == max_priority && binary > max_priority_train_bin) {
+
+                max_priority            = priority;
+                max_priority_train_id   = train_id;
+                max_priority_train_bin  = binary;
+                train_found             = true;
+            }
+        }
+
+        if (train_found == true) {
+            printf("max prio is %d of train %d in station %d \n", max_priority, max_priority_train_id, max_priority_train_bin);
+
+            pthread_mutex_lock(&station[max_priority_train_bin].mutex);
+            station[max_priority_train_bin].status = true;
+            pthread_mutex_unlock(&station[max_priority_train_bin].mutex);
+
+            pthread_mutex_lock(&train_par[max_priority_train_id].mutex);
+            train_par[max_priority_train_id].station_passed[max_priority_train_bin] = true;
+            pthread_mutex_unlock(&train_par[max_priority_train_id].mutex);
+
+            pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+            MOVE_TRAILS_SX = true;
+            pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+            pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);            
+            READY_TO_GO_SX = false;
+            pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+
+            pthread_mutex_lock(&max_prio_train_sx_mutex);
+            max_prio_train_sx = max_priority_train_id;
+            pthread_mutex_unlock(&max_prio_train_sx_mutex);
+        }
+
+        // Se ci sono altri semafori rossi a questo punto, aggiorno l'istante in cui il prossimo sem deve diventare verde
+        for (i = 0; i<= 3; i++) {
+
+            pthread_mutex_lock(&station[i].mutex);
+            station_status = station[i].status;
+            pthread_mutex_unlock(&station[i].mutex);
+
+            if (station_status == false) {
+                another_station_waiting = true;
                 break;
-            case(1):
+            }
+        }
 
-                if ((train_par[maxprioId].posx >= xPointIn_sem_up) && (train_par[maxprioId].posx <= xPointOut_sem_up)){
-                    semaphores[5].status = false;
-                    semaphores[3].status = false;
-                    station[3].status = false;
+        if (another_station_waiting == true) {
+            pthread_mutex_lock(&last_red_time_sx_mutex);
+            time_add_ms(&last_red_time_sx, STOP_TIME);
+            pthread_mutex_unlock(&last_red_time_sx_mutex);
+        }
+
+        else {
+            pthread_mutex_lock(&INIT_RED_TIME_SX_MUTEX);
+            INIT_RED_TIME_SX = false;
+            pthread_mutex_unlock(&INIT_RED_TIME_SX_MUTEX);
+        }
+    }
+    
+    pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+    move_trails = MOVE_TRAILS_SX;
+    pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+    if (move_trails == true) {
+
+        pthread_mutex_lock(&max_prio_train_sx_mutex);
+        train_id = max_prio_train_sx;
+        pthread_mutex_unlock(&max_prio_train_sx_mutex);
+
+        pthread_mutex_lock(&train_par[train_id].mutex);
+        bin     = train_par[train_id].binary;
+        posx    = train_par[train_id].posx;
+        pthread_mutex_unlock(&train_par[train_id].mutex);
+
+        switch (bin) {
+            case 0:
+
+                pthread_mutex_lock(&semaphores[5].mutex);
+                semaphores[5].trail_angle += TRAIL_ANGLE_INC;
+                if (semaphores[5].trail_angle >= TRAIL_UP_BIN_OUT_SWITCH_ON) {
+                    semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
                 }
+
+                if (semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON && 
+                    posx >= W - 1.5*SPACE) {
+
+                    pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+                    MOVE_TRAILS_SX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+                    pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+                    READY_TO_GO_SX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+                }
+                pthread_mutex_unlock(&semaphores[5].mutex);
+
+            break;
+            
+            case 1:
+                pthread_mutex_lock(&semaphores[4].mutex);
+                pthread_mutex_lock(&semaphores[5].mutex);
                 semaphores[4].trail_angle += TRAIL_ANGLE_INC;
                 if (semaphores[4].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {
                     semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
-                }; 
+                } 
+
                 semaphores[5].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
-                };  
-                if (train_par[maxprioId].posx >= W){
-                    semaphores[5].status = true;
-                    semaphores[3].status = true;
-                    station[3].status = true;
-                    max_prio_train_found_up = false;
-                };
-                break;
-            case(2): 
-                if ((train_par[maxprioId].posx >= xPointIn_sem_up) && (train_par[maxprioId].posx <= xPointOut_sem_up)){
-                    semaphores[5].status = false;
-                    semaphores[4].status = false;
-                    station[3].status = false;
-                };
+                }
+
+                if (semaphores[4].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON && 
+                    semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+                    posx >= W - 1.5*SPACE) {
+                    
+                    pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+                    MOVE_TRAILS_SX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+                    pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+                    READY_TO_GO_SX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+                }
+
+                pthread_mutex_unlock(&semaphores[5].mutex);
+                pthread_mutex_unlock(&semaphores[4].mutex);
+
+            break;
+
+            case 2:
+
+                pthread_mutex_lock(&semaphores[3].mutex);
+                pthread_mutex_lock(&semaphores[4].mutex);
+                pthread_mutex_lock(&semaphores[5].mutex);
                 semaphores[3].trail_angle += TRAIL_ANGLE_INC;
                 if (semaphores[3].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {
                     semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
-                }; 
+                }
                 semaphores[4].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
-                }; 
+                }
                 semaphores[5].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
-                };  
-                if (train_par[maxprioId].posx >= W){
-                    semaphores[5].status = true;
-                    semaphores[4].status = true;
-                    station[3].status = true;
-                    max_prio_train_found_up = false;
-                };
-                break;
-            case(3):
-                if ((train_par[maxprioId].posx >= station[bin].xPointIn) && (train_par[maxprioId].posx <= semaphores[bin].xPointOut)){
-                    semaphores[5].status = false;
-                    semaphores[4].status = false;
-                    semaphores[3].status = false;
-                };
+                }
+
+                if (semaphores[3].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON && 
+                    semaphores[4].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+                    semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+                    posx >= W - 1.5*SPACE) {
+                        
+                    pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+                    MOVE_TRAILS_SX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+                    
+                    pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+                    READY_TO_GO_SX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+                }
+                pthread_mutex_unlock(&semaphores[3].mutex);
+                pthread_mutex_unlock(&semaphores[4].mutex);
+                pthread_mutex_unlock(&semaphores[5].mutex);  
+            break;
+
+            case 3:
+
+                pthread_mutex_lock(&semaphores[3].mutex);
+                pthread_mutex_lock(&semaphores[4].mutex);
+                pthread_mutex_lock(&semaphores[5].mutex);
+
                 semaphores[3].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[3].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
-                }; 
+                }
+
                 semaphores[4].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
-                }; 
+                } 
+
                 semaphores[5].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {
                     semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
-                }; 
-                if (train_par[maxprioId].posx >= W ){
-                    semaphores[5].status = true;
-                    semaphores[4].status = true;
-                    semaphores[3].status = true;
-                    max_prio_train_found_up = false;
-                };
-                break;          
+                }
+
+                if (semaphores[3].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF && 
+                    semaphores[4].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+                    semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+                    posx >= W - 1.5*SPACE) {
+                        
+                    pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+                    MOVE_TRAILS_SX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+                    pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+                    READY_TO_GO_SX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+                }
+                pthread_mutex_unlock(&semaphores[3].mutex);
+                pthread_mutex_unlock(&semaphores[4].mutex);
+                pthread_mutex_unlock(&semaphores[5].mutex);
+            break;
+
+            default:
+            break;
         }
     }
+
+    // Solo quando è il momento di far diventare un semaforo verde:
+    //      Controlla il primo treno in coda di ogni stazione
+    //      Cerca quello a priorità maggiore
+    //      Fa diventare verde solo quel semaforo e sposta i binari
+
 }
 //-------------------------------------------------------------------------------------------------------------------------
-// FUNZIONE checkSemaphoreOutDown
+// FUNZIONE stationOutDx
 // 
 // 
 //-------------------------------------------------------------------------------------------------------------------------
-void checkSemaphoreOutDown(){
-    // cerco il treno con il massimo della priorità tra i treni pronti per uscire dalla stazione
-    // assegno alla variabile bin il numero del binario che rispetta la condizione sopra
-    // faccio i vari casi in base al bin
-    int maxprioId = 0;
-    int maxprio = 0;
-    int bin = 0;
-    int t = 0;
-    // bool train_found = false;
-    int xPointIn_sem_down;
-    int xPointOut_sem_down;
+void stationOutDx(){
+    bool    train_found;
+    bool    ready_to_go;
+    bool    init_red_time;
+    bool    station_status;
+    bool    another_station_waiting;
+    bool    move_trails;
+    int     train_id;
+    int     max_priority_train_id;
+    int     priority;
+    int     binary;
+    int     max_priority_train_bin;
+    int     max_priority;
+    int     i;
+    int     bin;
+    int     posx;
+    struct  timespec    now;
+    struct  timespec    leave_time;
 
-    if (!max_prio_train_found_down) {
-        for (int i = 1; i < TMAX; i++){
-            if (train_par[i].run && train_par[i].binary >= 4){
-                printf("train %d on binary %d is waiting: %d pos_queue %d\n",i, train_par[i].binary, train_par[i].station_flag, train_par[i].pos_in_queue);  
-                // printf("station %d queue: %d\n", train_par[i].binary, station[train_par[i].binary].queue); 
-                // if ((train_par[i].station_passed[train_par[i].binary] == true) && (train_par[i].pos_in_queue == 0)){
-                if ((train_par[i].station_flag == true) && (train_par[i].pos_in_queue == 0)) {
-                    if(train_par[i].priority > maxprio){
-                        maxprio = train_par[i].priority;
-                        max_prio_train_id_down = i;
-                    }
-                }
-                // else{
-                //     printf("no station are passed or first in queue\n");
-                // }
+    ready_to_go             = false;
+    train_found             = false;
+    another_station_waiting = false;
+
+    max_priority            = 0;
+    max_priority_train_bin  = 8;
+
+    pthread_mutex_lock(&INIT_RED_TIME_DX_MUTEX);
+    init_red_time = INIT_RED_TIME_DX;
+    pthread_mutex_unlock(&INIT_RED_TIME_DX_MUTEX);
+
+    if (init_red_time == true) {
+
+        pthread_mutex_lock(&last_red_time_dx_mutex);
+        time_copy(&leave_time, last_red_time_dx);
+        pthread_mutex_unlock(&last_red_time_dx_mutex);
+
+        time_add_ms(&leave_time, STOP_TIME);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+
+        pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+        if (time_cmp(now, leave_time) > 0 && READY_TO_GO_DX == true) {
+            ready_to_go = true;
+        }
+        pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+    }
+
+    if (ready_to_go == true) {
+
+        for (i = 4; i <= 7; i++) {
+            
+            pthread_mutex_lock(&station[i].mutex);
+            train_id = station[i].queue_list[0];
+            pthread_mutex_unlock(&station[i].mutex);
+
+            pthread_mutex_lock(&train_par[train_id].mutex);
+            priority    = train_par[train_id].priority;
+            binary      = train_par[train_id].binary;
+            pthread_mutex_unlock(&train_par[train_id].mutex);
+
+            if (priority > max_priority) {
+
+                max_priority            = priority;
+                max_priority_train_id   = train_id;
+                max_priority_train_bin  = binary;
+                train_found             = true;
+            }
+            else if (priority == max_priority && binary < max_priority_train_bin) {
+
+                max_priority            = priority;
+                max_priority_train_id   = train_id;
+                max_priority_train_bin  = binary;
+                train_found             = true;
             }
         }
-        printf("max prio down is %d\n", max_prio_train_id_down);
-    
-        if (train_par[max_prio_train_id_down].station_passed[train_par[max_prio_train_id_down].binary] == true){
-            if (station[train_par[max_prio_train_id_down].binary].status == false) {
-                station[train_par[max_prio_train_id_down].binary].status = true;
-                max_prio_train_found_down = true;
-                train_par[max_prio_train_id_down].station_flag = false;
+
+        if (train_found == true) {
+            printf("max prio is %d of train %d in station %d \n", max_priority, max_priority_train_id, max_priority_train_bin);
+
+            pthread_mutex_lock(&station[max_priority_train_bin].mutex);
+            station[max_priority_train_bin].status = true;
+            pthread_mutex_unlock(&station[max_priority_train_bin].mutex);
+
+            pthread_mutex_lock(&train_par[max_priority_train_id].mutex);
+            train_par[max_priority_train_id].station_passed[max_priority_train_bin] = true;
+            pthread_mutex_unlock(&train_par[max_priority_train_id].mutex);
+
+            pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+            MOVE_TRAILS_DX = true;
+            pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+            pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);            
+            READY_TO_GO_DX = false;
+            pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+
+            pthread_mutex_lock(&max_prio_train_dx_mutex);
+            max_prio_train_dx = max_priority_train_id;
+            pthread_mutex_unlock(&max_prio_train_dx_mutex);
+        }
+
+        // Se ci sono altri semafori rossi a questo punto, aggiorno l'istante in cui il prossimo sem deve diventare verde
+        for (i = 4; i<= 7; i++) {
+
+            pthread_mutex_lock(&station[i].mutex);
+            station_status = station[i].status;
+            pthread_mutex_unlock(&station[i].mutex);
+
+            if (station_status == false) {
+                another_station_waiting = true;
+                break;
             }
+        }
+
+        if (another_station_waiting == true) {
+            pthread_mutex_lock(&last_red_time_dx_mutex);
+            time_add_ms(&last_red_time_dx, STOP_TIME);
+            pthread_mutex_unlock(&last_red_time_dx_mutex);
+        }
+
+        else {
+            pthread_mutex_lock(&INIT_RED_TIME_DX_MUTEX);
+            INIT_RED_TIME_DX = false;
+            pthread_mutex_unlock(&INIT_RED_TIME_DX_MUTEX);
         }
     }
 
-    
-    
-    maxprioId = max_prio_train_id_down;
-    if (max_prio_train_found_down == true){
-        bin = train_par[maxprioId].binary;
-        t = abs(bin-13);
-        pthread_mutex_lock(&semaphores[t].mutex);
-        xPointIn_sem_down       = station[bin].xPointOut ;
-        xPointOut_sem_down      = semaphores[t].xPointOut;
-        pthread_mutex_unlock(&semaphores[t].mutex);
+    pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+    move_trails = MOVE_TRAILS_DX;
+    pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
 
-        switch (bin){
 
-            case(4):
-                if ((train_par[maxprioId].posx <= xPointIn_sem_down) && (train_par[maxprioId].posx >= xPointOut_sem_down)){
-                    semaphores[8].status = false;
-                    semaphores[7].status = false;
-                    semaphores[6].status = false;
-                };
+    if (move_trails == true) {
+
+        pthread_mutex_lock(&max_prio_train_dx_mutex);
+        train_id = max_prio_train_dx;
+        pthread_mutex_unlock(&max_prio_train_dx_mutex);
+
+        pthread_mutex_lock(&train_par[train_id].mutex);
+        bin     = train_par[train_id].binary;
+        posx    = train_par[train_id].posx;
+        pthread_mutex_unlock(&train_par[train_id].mutex);
+
+        switch (bin) {
+                
+            case 4:
+
+                pthread_mutex_lock(&semaphores[6].mutex);
+                pthread_mutex_lock(&semaphores[7].mutex);
+                pthread_mutex_lock(&semaphores[8].mutex);
+
                 semaphores[6].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[6].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
                     semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
-                }; 
+                }
+
                 semaphores[7].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[7].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
                     semaphores[7].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
-                }; 
+                } 
+
                 semaphores[8].trail_angle -= TRAIL_ANGLE_INC;
                 if (semaphores[8].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
                     semaphores[8].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
-                }; 
-                if (train_par[maxprioId].posx <= 0){
-                    semaphores[8].status = true;
-                    semaphores[7].status = true;
-                    semaphores[6].status = true;
-                    max_prio_train_found_down = false;
-                };
-                break;  
+                }
 
-            case(5): 
-                if ((train_par[maxprioId].posx <= xPointIn_sem_down) && (train_par[maxprioId].posx >= xPointOut_sem_down)){
-                    semaphores[8].status = false;
-                    semaphores[7].status = false;
-                    station[4].status = false;
-                };
+                if (semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF && 
+                    semaphores[7].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+                    semaphores[8].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+                    posx <= 1.5*SPACE) {
+                    
+                    pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+                    MOVE_TRAILS_DX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+                    pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+                    READY_TO_GO_DX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+                }
+                pthread_mutex_unlock(&semaphores[6].mutex);
+                pthread_mutex_unlock(&semaphores[7].mutex);
+                pthread_mutex_unlock(&semaphores[8].mutex);
+            break;
+
+            case 5:
+                pthread_mutex_lock(&semaphores[6].mutex);
+                pthread_mutex_lock(&semaphores[7].mutex);
+                pthread_mutex_lock(&semaphores[8].mutex);
+                semaphores[6].trail_angle += TRAIL_ANGLE_INC;
+                if (semaphores[6].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
+                    semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+                }
+                semaphores[7].trail_angle += TRAIL_ANGLE_INC;
+                if (semaphores[7].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
+                    semaphores[7].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+                }
                 semaphores[8].trail_angle += TRAIL_ANGLE_INC;
                 if (semaphores[8].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_ON) {
                     semaphores[8].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_ON;
-                }; 
-                semaphores[7].trail_angle -= TRAIL_ANGLE_INC;
-                if (semaphores[7].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
-                    semaphores[7].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
-                }; 
-                semaphores[6].trail_angle -= TRAIL_ANGLE_INC;
-                if (semaphores[6].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
-                    semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
-                };  
-                if (train_par[maxprioId].posx <= 0){
-                    semaphores[8].status = true;
-                    semaphores[7].status = true;
-                    station[4].status = true;
-                    max_prio_train_found_down = false;
-                };
-                break;
-
-            case(6):
-
-                if ((train_par[maxprioId].posx <= xPointIn_sem_down) && (train_par[maxprioId].posx >= xPointOut_sem_down)){
-                    semaphores[8].status = false;
-                    semaphores[6].status = false;
-                    station[4].status = false;
                 }
+
+                if (semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF && 
+                    semaphores[7].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+                    semaphores[8].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_ON &&
+                    posx < 1.5*SPACE) {
+                        
+                    pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+                    MOVE_TRAILS_DX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+                    
+                    pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+                    READY_TO_GO_DX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+                }
+                pthread_mutex_unlock(&semaphores[6].mutex);
+                pthread_mutex_unlock(&semaphores[7].mutex);
+                pthread_mutex_unlock(&semaphores[8].mutex);  
+            break;
+
+            case 6:
+                pthread_mutex_lock(&semaphores[7].mutex);
+                pthread_mutex_lock(&semaphores[6].mutex);
                 semaphores[7].trail_angle += TRAIL_ANGLE_INC;
                 if (semaphores[7].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_ON) {
                     semaphores[7].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_ON;
-                }; 
-                semaphores[8].trail_angle -= TRAIL_ANGLE_INC;
-                if (semaphores[8].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
-                    semaphores[8].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
-                };  
-                if (train_par[maxprioId].posx <= 0){
-                    semaphores[8].status = true;
-                    semaphores[6].status = true;
-                    station[4].status = true;
-                    max_prio_train_found_down = false;
-                };
-                break;
+                } 
 
-            case(7):
-                if ((train_par[maxprioId].posx <= station[bin].xPointIn) && (train_par[maxprioId].posx >= semaphores[bin].xPointOut)){
-                    semaphores[7].status = false;
-                    semaphores[8].status = false;
-                    station[4].status = false;
-                };
-                semaphores[8].trail_angle += TRAIL_ANGLE_INC;
-                if (semaphores[8].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {
-                    semaphores[8].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
-                }; 
-                if (train_par[maxprioId].posx <= 0){
-                    semaphores[7].status = true;
-                    semaphores[8].status = true;
-                    station[4].status = true;
-                    max_prio_train_found_down = false;
-                };
-                break;        
+                semaphores[6].trail_angle -= TRAIL_ANGLE_INC;
+                if (semaphores[6].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {
+                    semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+                }
+
+                if (semaphores[7].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_ON && 
+                    semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+                    posx < 1.5*SPACE) {
+                    
+                    pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+                    MOVE_TRAILS_DX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+                    pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+                    READY_TO_GO_DX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+
+                }
+
+                pthread_mutex_unlock(&semaphores[7].mutex);
+                pthread_mutex_unlock(&semaphores[6].mutex);
+            break;
+
+            case 7:
+                pthread_mutex_lock(&semaphores[6].mutex);
+                semaphores[6].trail_angle += TRAIL_ANGLE_INC;
+                if (semaphores[6].trail_angle >= TRAIL_DOWN_BIN_OUT_SWITCH_ON) {
+                    semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_ON;
+                }
+
+                if (semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_ON && 
+                    posx < 1.5*SPACE) {
+
+                    pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+                    MOVE_TRAILS_DX = false;
+                    pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+                    pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+                    READY_TO_GO_DX = true;
+                    pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+                }
+                pthread_mutex_unlock(&semaphores[6].mutex);
+
+            break;
+            
+            default:
+            break;
         }
     }
+
 }
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE CheckStation
@@ -1627,6 +1910,7 @@ void checkStation(int trainId) {
     bool    station_passed;
     bool    semaphore_flag;
     bool    train_in_station;
+    bool    init_red_time;
     struct  timespec    now;
     struct  timespec    leave_time;
     int     stationId;
@@ -1655,10 +1939,20 @@ void checkStation(int trainId) {
         switch (direction) {
 
         case FROM_SX:
+
+            pthread_mutex_lock(&INIT_RED_TIME_SX_MUTEX);
+            init_red_time = INIT_RED_TIME_SX;
+            pthread_mutex_unlock(&INIT_RED_TIME_SX_MUTEX);
+
             if (posx > xPointIn && posx < xPointOut)    train_in_station = true;
             break;
 
         case FROM_DX:
+            
+            pthread_mutex_lock(&INIT_RED_TIME_DX_MUTEX);
+            init_red_time = INIT_RED_TIME_DX;
+            pthread_mutex_unlock(&INIT_RED_TIME_DX_MUTEX);
+            
             if (posx < xPointIn && posx > xPointOut)    train_in_station = true;
             break;
         default:
@@ -1678,8 +1972,9 @@ void checkStation(int trainId) {
                 pthread_mutex_lock(&train_par[trainId].mutex);
 
                 // Flag per comunicare che il treno è in stazione
-                train_par[trainId].semaphore_flag = true;
-                train_par[trainId].station_flag = true;
+                train_par[trainId].semaphore_flag   = true;
+                train_par[trainId].station_flag     = true;
+
                 // Eseguito la prima volta e ogni volta che la coda si muove
                 if (train_par[trainId].queue == false) {
                     pthread_mutex_lock(&station[stationId].mutex);
@@ -1716,42 +2011,75 @@ void checkStation(int trainId) {
                 pthread_mutex_unlock(&train_par[trainId].mutex);
 
                 // Salvo l'istante in cui il semaforo diventa rosso
-                clock_gettime(CLOCK_MONOTONIC, &now);                
+                // clock_gettime(CLOCK_MONOTONIC, &now);                
 
                 // Aggiorno la struttura della stazione
                 pthread_mutex_lock(&station[stationId].mutex);
-                time_copy(&station[stationId].green_time, now);
-                time_add_ms(&station[stationId].green_time, STOP_TIME);
+                // time_copy(&station[stationId].green_time, now);
+                // time_add_ms(&station[stationId].green_time, STOP_TIME);
                 station[stationId].status = false;
                 pthread_mutex_unlock(&station[stationId].mutex);
+
+                if (init_red_time == false) {
+                    
+                    clock_gettime(CLOCK_MONOTONIC, &now);
+                    switch (direction) {
+
+                        case FROM_SX:
+
+                            pthread_mutex_lock(&INIT_RED_TIME_SX_MUTEX);
+                            INIT_RED_TIME_SX = true;
+                            pthread_mutex_unlock(&INIT_RED_TIME_SX_MUTEX);
+
+                            pthread_mutex_lock(&last_red_time_sx_mutex);
+                            time_copy(&last_red_time_sx, now);
+                            pthread_mutex_unlock(&last_red_time_sx_mutex);
+                            break;
+                        
+                        case FROM_DX:
+
+                            pthread_mutex_lock(&INIT_RED_TIME_DX_MUTEX);
+                            INIT_RED_TIME_DX = true;
+                            pthread_mutex_unlock(&INIT_RED_TIME_DX_MUTEX);
+
+                            pthread_mutex_lock(&last_red_time_dx_mutex);
+                            time_copy(&last_red_time_dx, now);
+                            pthread_mutex_unlock(&last_red_time_dx_mutex);
+                            break;
+
+                        default:
+                            break;
+                            
+                    }
+                }
             }
 
             // SEMAFORO ROSSO
-            pthread_mutex_lock(&station[stationId].mutex);
-            station_status = station[stationId].status;
-            pthread_mutex_unlock(&station[stationId].mutex);
+            // pthread_mutex_lock(&station[stationId].mutex);
+            // station_status = station[stationId].status;
+            // pthread_mutex_unlock(&station[stationId].mutex);
 
-            if (station_status == false) {
+            // if (station_status == false) {
 
-                // Timer per far tornare il semaforo della stazione verde
-                clock_gettime(CLOCK_MONOTONIC, &now);
+            //     // Timer per far tornare il semaforo della stazione verde
+            //     clock_gettime(CLOCK_MONOTONIC, &now);
 
-                pthread_mutex_lock(&station[stationId].mutex);
-                time_copy(&leave_time, station[stationId].green_time);
-                pthread_mutex_unlock(&station[stationId].mutex);
+            //     pthread_mutex_lock(&station[stationId].mutex);
+            //     time_copy(&leave_time, station[stationId].green_time);
+            //     pthread_mutex_unlock(&station[stationId].mutex);
 
 
-                if (time_cmp(now, leave_time) == 1) {
+            //     if (time_cmp(now, leave_time) == 1) {
                     
-                    // Il semaforo diventa verde e segno l'istante in cui deve tornare rosso se c'è una coda
-                    // pthread_mutex_lock(&station[stationId].mutex);
-                    // station[stationId].status = true;
-                    // pthread_mutex_unlock(&station[stationId].mutex);
-                    pthread_mutex_lock(&train_par[trainId].mutex);
-                    train_par[trainId].station_passed[stationId] = true;
-                    pthread_mutex_unlock(&train_par[trainId].mutex);
-                }     
-            }   
+            //         //Il semaforo diventa verde e segno l'istante in cui deve tornare rosso se c'è una coda
+            //         pthread_mutex_lock(&station[stationId].mutex);
+            //         station[stationId].status = true;
+            //         pthread_mutex_unlock(&station[stationId].mutex);
+            //         pthread_mutex_lock(&train_par[trainId].mutex);
+            //         train_par[trainId].station_passed[stationId] = true;
+            //         pthread_mutex_unlock(&train_par[trainId].mutex);
+            //     }     
+            // }   
         }
     }
 }

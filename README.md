@@ -1,6 +1,9 @@
 # Trains
 
-*Trains* simulates a station of trains. Trains have three different priorities and the station manager tries to minimize the crossing time of the highest priorities ones.
+*Trains* Simulate a train station with 8 tracks that must be allocated to the incoming trains. Trains can
+have different priority and can be generated from the user or automatically. They can arrive and leave from
+two tracks on the left and two on the right. The controller task has to manage track switches (also to
+be animated) and traffic lights on each track.
 
 ## Install dependencies
 
@@ -10,7 +13,7 @@ This application requires Allegro4 to run. The suggested way to install is:
 
 ## Download
 
-`git clone https://https://github.com/leoll2/Ants.git`
+`git clone https://github.com/polks93/Trains.git`
 
 ## Compile
 

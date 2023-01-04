@@ -5,7 +5,7 @@
 #define FUNCTIONS_h
 
 // TASK
-#define     TMAX                                100
+#define     TMAX                                150
 #define     TRAIN_TASK_PERIOD                   20
 #define     TRAIN_TASK_DL                       10
 #define     TRAIN_TASK_PRIO                     255 
@@ -31,7 +31,7 @@
 #define     INTERFACE_H                         90
 #define     INTERFACE_W                         1280
 #define     WINDOW_H                            H + INTERFACE_H
-#define     N_BUTTONS                           8
+#define     N_BUTTONS                           9
 #define     L_BUTTONS                           50
 #define     SPACE_BUTTONS                       20
 #define     SPACE                               H/9            
@@ -47,7 +47,7 @@
 #define     MAX_VEL                             150
 #define     MAX_ACC                             100
 #define     MIN_MS_BETWEEN_TRAINS               1000
-#define     MAX_MS_BETWEEN_TRAINS               3000
+#define     MAX_MS_BETWEEN_TRAINS               2000
 
 // SEMAFORI, STAZIONI E BINARI
 #define     SEMAPHORES_NUM                      12
@@ -106,7 +106,8 @@ enum buttons_names{
     TRAIN_FROM_DX = 4,
     TRAIN_FROM_SX = 5,
     RANDOM_DIRECTION = 6,
-    CLOSE_PROGRAM = 7
+    AUTO_MODE = 7,
+    CLOSE_PROGRAM = 8
 };
 
 struct train_bitmap {
@@ -192,6 +193,7 @@ bool    MOVE_TRAILS_SX;
 bool    MOVE_TRAILS_DX;
 bool    READY_TO_GO_SX;
 bool    READY_TO_GO_DX;
+bool    AUTO_MODE_ON;
 int     ready_trains_num;
 int     last_assigned_train_id;
 int     total_train_dl;
@@ -212,6 +214,7 @@ pthread_mutex_t MOVE_TRAILS_SX_MUTEX;
 pthread_mutex_t MOVE_TRAILS_DX_MUTEX;
 pthread_mutex_t READY_TO_GO_SX_MUTEX;
 pthread_mutex_t READY_TO_GO_DX_MUTEX;
+pthread_mutex_t AUTO_MODE_ON_MUTEX;
 pthread_mutex_t ready_trains_num_mutex;
 pthread_mutex_t last_assigned_train_id_mutex;
 pthread_mutex_t trains_in_binary_mutex;
@@ -250,6 +253,8 @@ BITMAP *from_sx_on;
 BITMAP *from_sx_off;
 BITMAP *rnd_direction_on;
 BITMAP *rnd_direction_off;
+BITMAP *auto_mode_on;
+BITMAP *auto_mode_off;
 BITMAP *green_arrow_dx;
 BITMAP *green_arrow_sx;
 BITMAP *red_arrow_dx;

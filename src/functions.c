@@ -31,6 +31,7 @@ void initialize() {
     pthread_mutex_init(&trains_in_binary_mutex,             NULL);
     pthread_mutex_init(&ASSIGNED_DIRECTION_MUTEX,           NULL);
     pthread_mutex_init(&user_direction_mutex,               NULL);
+    pthread_mutex_init(&AUTO_MODE_ON_MUTEX,                 NULL);
     pthread_mutex_init(&last_assigned_train_from_dx_mutex,  NULL);
     pthread_mutex_init(&last_assigned_train_from_sx_mutex,  NULL);
     pthread_mutex_init(&INIT_RED_TIME_SX_MUTEX,             NULL);
@@ -52,6 +53,7 @@ void initialize() {
     EXIT                                = false;
     EXIT_COMMAND                        = false;
     ASSIGNED_DIRECTION                  = false;
+    AUTO_MODE_ON                        = false;
     INIT_RED_TIME_SX                    = false;
     INIT_RED_TIME_DX                    = false;
     MOVE_TRAILS_SX                      = false;
@@ -128,6 +130,9 @@ void initialize() {
 
     rnd_direction_off = load_bitmap("img/buttons/rnd_direction_off.bmp", NULL);
     rnd_direction_on = load_bitmap("img/buttons/rnd_direction_on.bmp", NULL);
+
+    auto_mode_off = load_bitmap("img/buttons/auto_mode_off.bmp", NULL);
+    auto_mode_on = load_bitmap("img/buttons/auto_mode_on.bmp", NULL);
     
     close_program_off = load_bitmap("img/buttons/exit_off.bmp", NULL);
     close_program_on = load_bitmap("img/buttons/exit_on.bmp", NULL);
@@ -213,14 +218,23 @@ void initialize() {
     button[6].y_min         = SPACE_BUTTONS;
     button[6].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
-    // close program
-    button[7].button_off    = close_program_off;
-    button[7].button_on     = close_program_on;
+    // auto mode
+    button[7].button_off    = auto_mode_off;
+    button[7].button_on     = auto_mode_on;    
     button[7].state         = false;
-    button[7].x_min         = INTERFACE_W - 2*SPACE_BUTTONS - L_BUTTONS;
+    button[7].x_min         = button[6].x_max + 2*SPACE_BUTTONS;
     button[7].x_max         = button[7].x_min + L_BUTTONS;
     button[7].y_min         = SPACE_BUTTONS;
     button[7].y_max         = SPACE_BUTTONS + L_BUTTONS;
+
+    // close program
+    button[8].button_off    = close_program_off;
+    button[8].button_on     = close_program_on;
+    button[8].state         = false;
+    button[8].x_min         = INTERFACE_W - 2*SPACE_BUTTONS - L_BUTTONS;
+    button[8].x_max         = button[8].x_min + L_BUTTONS;
+    button[8].y_min         = SPACE_BUTTONS;
+    button[8].y_max         = SPACE_BUTTONS + L_BUTTONS;
 
     // POSIZIONE DELLE INTERSEZIONI TRA I BINARI
     // binario 1
@@ -380,7 +394,6 @@ void initialize() {
     task_create(user_task,          USER_TASK_ID,               USER_TASK_PERIOD,               USER_TASK_DL,               USER_TASK_PRIO);                  
 
     printf("Initialization completed!\n");
-    printf("Press SPACE to create a new random train \n");
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
@@ -456,7 +469,7 @@ void    *user_task(void *p) {
                     button[TRAIN_FROM_SX].button_off = from_sx_off;
                     
                     printf("---------------------------------------------------------------------------- \n");
-                    printf("Direction selected: new trains will appear from the right side \n");
+                    printf("RIGHT DIRECTION SELECTED: new trains will appear only from the right side \n");
 
                     break;
 
@@ -473,7 +486,7 @@ void    *user_task(void *p) {
                     button[TRAIN_FROM_DX].button_off = from_dx_off;
 
                     printf("---------------------------------------------------------------------------- \n");
-                    printf("Direction selected: new trains will appear from the left side \n");
+                    printf("LEFT DIRECTION SELECTED: new trains will appear only from the left side \n");
 
                     break;
 
@@ -486,8 +499,25 @@ void    *user_task(void *p) {
                     button[TRAIN_FROM_DX].button_off = from_dx_off;
 
                     printf("---------------------------------------------------------------------------- \n");                    
-                    printf("Random direction restored \n");
+                    printf("RANDOM DIRECTION RESTORED: new trains will appear from a random direction \n");
 
+                    break;
+
+                case AUTO_MODE:
+                    pthread_mutex_lock(&AUTO_MODE_ON_MUTEX);
+                    if (AUTO_MODE_ON == false) {
+                        AUTO_MODE_ON = true;
+                        button[AUTO_MODE].button_off = auto_mode_on;
+                        printf("---------------------------------------------------------------------------- \n");
+                        printf("AUTONOMOUS MODE ACTIVATED: new trains will be automatically generated after 2 second from the last one \n");
+                    }
+                    else {
+                        AUTO_MODE_ON = false;
+                        button[AUTO_MODE].button_off = auto_mode_off;
+                        printf("---------------------------------------------------------------------------- \n");
+                        printf("MANUAL MODE RESTORED: new trains will be generated only by the user \n");
+                    }
+                    pthread_mutex_unlock(&AUTO_MODE_ON_MUTEX);
                     break;
 
                 case CLOSE_PROGRAM:
@@ -520,28 +550,34 @@ void    *user_task(void *p) {
                 break;
         }
         
-        // PARTE 3: genera un treno random dopo 3 secondi che non viene generato un treno
-        // pthread_mutex_lock(&last_assigned_train_from_dx_mutex);
-        // pthread_mutex_lock(&last_assigned_train_from_sx_mutex);
+        // PARTE 3: modalità autonoma che genera un treno random dopo 3 secondi 
+        // che non viene generato un treno
+        pthread_mutex_lock(&AUTO_MODE_ON_MUTEX);
 
-        // if (time_cmp(last_assigned_train_from_dx, last_assigned_train_from_sx) > 0) {
-        //     time_copy(&last_assigned_train, last_assigned_train_from_dx);
-        // }
-        // else {
-        //     time_copy(&last_assigned_train, last_assigned_train_from_sx);
-        // }
+        if (AUTO_MODE_ON == true) {
+            pthread_mutex_lock(&last_assigned_train_from_dx_mutex);
+            pthread_mutex_lock(&last_assigned_train_from_sx_mutex);
 
-        // pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
-        // pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);
+            if (time_cmp(last_assigned_train_from_dx, last_assigned_train_from_sx) > 0) {
+                time_copy(&last_assigned_train, last_assigned_train_from_dx);
+            }
+            else {
+                time_copy(&last_assigned_train, last_assigned_train_from_sx);
+            }
 
-        // clock_gettime(CLOCK_MONOTONIC, &now);
-        // time_add_ms(&last_assigned_train, MAX_MS_BETWEEN_TRAINS);
+            pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
+            pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);
 
-        // if (time_cmp(now, last_assigned_train) > 0) {
-        //     if (i == TMAX) i = 1;
-        //     task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO);
-        //     i++;
-        // }
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            time_add_ms(&last_assigned_train, MAX_MS_BETWEEN_TRAINS);
+
+            if (time_cmp(now, last_assigned_train) > 0) {
+                if (i == TMAX) i = 1;
+                task_create(train, i, TRAIN_TASK_PERIOD, TRAIN_TASK_DL, TRAIN_TASK_PRIO);
+                i++;
+            }
+        }
+        pthread_mutex_unlock(&AUTO_MODE_ON_MUTEX);
 
     if(deadline_miss(id))           printf("Deadline miss of user task \n");
     wait_for_activation(id);
@@ -605,7 +641,7 @@ void *graphics(void *p){
         blit(interface, interface_buffer, 0, 0, 0, 0, interface->w, interface->h);
 
         // SEMAFORI DEGLI INCROCI
-        for (i = 0; i < SEMAPHORES_NUM; i++){
+        for (i = 0; i < 3; i++){
 
             pthread_mutex_lock(&semaphores[i].mutex);
             if (semaphores[i].status == false)      semaphores[i].sem = sem_r;
@@ -616,6 +652,14 @@ void *graphics(void *p){
             sprintf(sem_number,"%d",i);
             textout_ex(buffer, font, sem_number, semaphores[i].xPointDraw, semaphores[i].yPointDraw + 10, (0,25,0), -1);
             
+            pthread_mutex_lock(&semaphores[i+9].mutex);
+            if (semaphores[i+9].status == false)        semaphores[i+9].sem = sem_r;
+            else                                        semaphores[i+9].sem = sem_g;
+            stretch_sprite(buffer, semaphores[i+9].sem, semaphores[i+9].xPointDraw - sem_w/2, semaphores[i+9].yPointDraw - sem_h, sem_w, sem_h);
+            pthread_mutex_unlock(&semaphores[i+9].mutex);
+
+            sprintf(sem_number,"%d",i+9);
+            textout_ex(buffer, font, sem_number, semaphores[i+9].xPointDraw, semaphores[i+9].yPointDraw + 10, (0,25,0), -1);
         }
         
         // SEMAFORI DELLA STAZIONE
@@ -650,8 +694,6 @@ void *graphics(void *p){
         for (i = 1; i < TMAX; i++){
             pthread_mutex_lock(&train_par[i].mutex);
             if (train_par[i].run == true){
-                // DEBUG GRAFICO
-                // line(buffer, train_par[i].stop_x, train_par[i].wagons[0].posy + TRAIN_H, train_par[i].stop_x, train_par[i].wagons[0].posy - TRAIN_H,(0,0,0));
                 for (j = 0; j < WAGONS; j++){
                     draw_sprite(buffer, train_par[i].wagons[j].bmp, train_par[i].wagons[j].posx, train_par[i].wagons[j].posy);
                 }
@@ -712,7 +754,6 @@ void *graphics(void *p){
         sprintf(str, "Queue: %d", semaphores[2].queue);
         textout_ex(buffer, font, str, semaphores[2].xPointDraw, H/2, (0,0,0),-1);
 
-
         // STAMPA I DL MISS SU SCHERMO
         sprintf(str, "GRAPHIC TASK DL: %d", tp[GRAPHIC_TASK_ID].dmiss);
         textout_ex(interface_buffer, font, str, 800, 10, (0,0,0), -1);
@@ -722,21 +763,6 @@ void *graphics(void *p){
         textout_ex(interface_buffer, font, str, 800, 50, (0,0,0), -1);
         sprintf(str, "TOTAL TRAIN TASK DL: %d", total_train_dl);
         textout_ex(interface_buffer, font, str, 800, 70, (0,0,0), -1);
-
-        // int k = 0;
-        // sprintf(sem_number, "%d", k);
-        // line(buffer, semaphores[k].xPointStop, 0,   semaphores[k].xPointStop, H, (0,0,0));
-        // textout_ex(buffer, font, sem_number, semaphores[k].xPointStop + 10, semaphores[k].yPointDraw - 10, (0,25,0), -1);
-        // sprintf(sem_number, "%d", k+1);
-        // line(buffer, semaphores[k+1].xPointStop, 0, semaphores[k+1].xPointStop, H, (0,0,0));
-        // textout_ex(buffer, font, sem_number, semaphores[k+1].xPointStop + 10, semaphores[k+1].yPointDraw - 10, (0,25,0), -1);
-        // sprintf(sem_number, "%d", k+2);
-        // line(buffer, semaphores[k+2].xPointStop, 0, semaphores[k+2].xPointStop, H, (0,0,0));
-        // textout_ex(buffer, font, sem_number, semaphores[k+2].xPointStop + 10, semaphores[k+2].yPointDraw - 10, (0,25,0), -1);
-        // sprintf(sem_number, "%d", k+3);
-        // line(buffer, semaphores[k+3].xPointStop, 0, semaphores[k+3].xPointStop, H, (0,0,0));
-        // textout_ex(buffer, font, sem_number, semaphores[k+3].xPointStop + 10, semaphores[k+3].yPointDraw + 10, (0,25,0), -1);
-
 
         // DISEGNO IL BUFFER SULLO SCHERMO
         blit(buffer, screen, 0, 0, 0, 0, background->w, background->h);
@@ -763,6 +789,7 @@ void *graphics(void *p){
     printf("Closing graphics...\n");
     ptask_exit(id);
 }
+
 //-------------------------------------------------------------------------------------------------------------------------
 // TASK station_manager
 //
@@ -882,8 +909,6 @@ void *station_manager(void *p){
         }
         stationOutSx();
         stationOutDx();
-        //checkSemaphoreOutUp();
-        //checkSemaphoreOutDown();
 
         if(deadline_miss(id))           printf("Deadline miss of station manager task \n");
         wait_for_activation(id);
@@ -1610,12 +1635,6 @@ void stationOutSx() {
             break;
         }
     }
-
-    // Solo quando è il momento di far diventare un semaforo verde:
-    //      Controlla il primo treno in coda di ogni stazione
-    //      Cerca quello a priorità maggiore
-    //      Fa diventare verde solo quel semaforo e sposta i binari
-
 }
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE stationOutDx
@@ -2006,15 +2025,10 @@ void checkStation(int trainId) {
                     }
                     pthread_mutex_unlock(&station[stationId].mutex);
                 }
-                pthread_mutex_unlock(&train_par[trainId].mutex);
-
-                // Salvo l'istante in cui il semaforo diventa rosso
-                // clock_gettime(CLOCK_MONOTONIC, &now);                
+                pthread_mutex_unlock(&train_par[trainId].mutex);               
 
                 // Aggiorno la struttura della stazione
                 pthread_mutex_lock(&station[stationId].mutex);
-                // time_copy(&station[stationId].green_time, now);
-                // time_add_ms(&station[stationId].green_time, STOP_TIME);
                 station[stationId].status = false;
                 pthread_mutex_unlock(&station[stationId].mutex);
 
@@ -2050,34 +2064,7 @@ void checkStation(int trainId) {
                             
                     }
                 }
-            }
-
-            // SEMAFORO ROSSO
-            // pthread_mutex_lock(&station[stationId].mutex);
-            // station_status = station[stationId].status;
-            // pthread_mutex_unlock(&station[stationId].mutex);
-
-            // if (station_status == false) {
-
-            //     // Timer per far tornare il semaforo della stazione verde
-            //     clock_gettime(CLOCK_MONOTONIC, &now);
-
-            //     pthread_mutex_lock(&station[stationId].mutex);
-            //     time_copy(&leave_time, station[stationId].green_time);
-            //     pthread_mutex_unlock(&station[stationId].mutex);
-
-
-            //     if (time_cmp(now, leave_time) == 1) {
-                    
-            //         //Il semaforo diventa verde e segno l'istante in cui deve tornare rosso se c'è una coda
-            //         pthread_mutex_lock(&station[stationId].mutex);
-            //         station[stationId].status = true;
-            //         pthread_mutex_unlock(&station[stationId].mutex);
-            //         pthread_mutex_lock(&train_par[trainId].mutex);
-            //         train_par[trainId].station_passed[stationId] = true;
-            //         pthread_mutex_unlock(&train_par[trainId].mutex);
-            //     }     
-            // }   
+            } 
         }
     }
 }
@@ -2259,7 +2246,6 @@ void *train(void *p) {
         switch (curr_state){
 
             case(GO_FAST):
-                //  printf("GO FAST \n");
                 // MOVIMENTO NORMALE DEL TRENO
                 acc = 0;
                 vel = MAX_VEL;
@@ -2278,7 +2264,6 @@ void *train(void *p) {
                 break;
 
             case(SLOW_DOWN):
-                //  printf("SLOW DOWN \n");
                 // RALLENTO PRIMA DI UN SEMAFORO
                 acc = - MAX_ACC;
 
@@ -2312,7 +2297,6 @@ void *train(void *p) {
                 break;
 
             case(QUEUE):  
-                //  printf("QUEUE \n");         
                 // MOVIMENTO DELLA CODA DEL SEMAFORO
                 pthread_mutex_lock(&train_par[id].mutex);
                 if (train_par[id].ready_to_go_flag == true) {
@@ -2342,9 +2326,7 @@ void *train(void *p) {
 
                 break;
 
-            case(STOP):
-                //  printf("STOP \n");
-                
+            case(STOP):                
                 if (stop_type == STATION) {
 
                     pthread_mutex_lock(&station[stop_id].mutex);
@@ -2386,7 +2368,6 @@ void *train(void *p) {
                 break;
 
             case(SPEED_UP):
-                //  printf("SPEED UP \n");
                 // USCITA DAL SEMAFORO
                 acc = MAX_ACC;
 

@@ -1413,7 +1413,6 @@ void stationOutSx() {
         }
 
         if (train_found == true) {
-            printf("max prio is %d of train %d in station %d \n", max_priority, max_priority_train_id, max_priority_train_bin);
 
             pthread_mutex_lock(&station[max_priority_train_bin].mutex);
             station[max_priority_train_bin].status = true;
@@ -1699,7 +1698,6 @@ void stationOutDx(){
         }
 
         if (train_found == true) {
-            printf("max prio is %d of train %d in station %d \n", max_priority, max_priority_train_id, max_priority_train_bin);
 
             pthread_mutex_lock(&station[max_priority_train_bin].mutex);
             station[max_priority_train_bin].status = true;

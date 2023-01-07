@@ -3,18 +3,20 @@
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
-#include "ptask.h"
+
+#include "init.h"
 #include "functions.h"
 
 int main() {
     
-    int j = 1;
+    int i;
 
     initialize();
     
+    i = 1;
     do {   
-        if (EXIT_COMMAND == true) j = 0; 
-    } while (j); 
+        if (EXIT_COMMAND == true) i = 0; 
+    } while (i); 
     
     exit_all();
     return 0;

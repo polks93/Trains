@@ -47,55 +47,48 @@ void *station_manager(void *p){
                 train_par[i].checked = false;
                 pthread_mutex_unlock(&train_par[i].mutex);
 
+                // CHECK DEI SEMAFORI
                 switch(binary){
 
                 case(0):
-                    // check semaforo
                     checkSemaphoreIn(i, 0, TRAIL_ON);
                     break;
 
                 case(1):
-                    // check semaforo
                     checkSemaphoreIn(i, 0, TRAIL_OFF);
                     checkSemaphoreIn(i, 1, TRAIL_ON);
                     break;
 
                 case(2):
-                    // check semaforo
                     checkSemaphoreIn(i, 0, TRAIL_OFF);
                     checkSemaphoreIn(i, 1, TRAIL_OFF);
                     checkSemaphoreIn(i, 2, TRAIL_ON);
                     break;
 
                 case(3):
-                    // check semaforo
                     checkSemaphoreIn(i, 0, TRAIL_OFF);
                     checkSemaphoreIn(i, 1, TRAIL_OFF);
                     checkSemaphoreIn(i, 2, TRAIL_OFF);
                     break;
 
                 case(4):
-                    // check semaforo
                     checkSemaphoreIn(i, 11, TRAIL_OFF);
                     checkSemaphoreIn(i, 10, TRAIL_OFF);
                     checkSemaphoreIn(i, 9, TRAIL_OFF);
                     break; 
 
                 case(5):
-                    // check semaforo
                     checkSemaphoreIn(i, 11, TRAIL_OFF);
                     checkSemaphoreIn(i, 10, TRAIL_OFF);
                     checkSemaphoreIn(i, 9, TRAIL_ON);
                     break; 
 
                 case(6):
-                    // check semaforo
                     checkSemaphoreIn(i, 11, TRAIL_OFF);
                     checkSemaphoreIn(i, 10, TRAIL_ON);
                     break; 
 
                 case(7):
-                    // check semaforo
                     checkSemaphoreIn(i, 11, TRAIL_ON);
                     break;
 
@@ -127,10 +120,16 @@ void *station_manager(void *p){
             if (trail_queue > 0)    move_semaphore_queue_in(i);
         }
         
+        // Gestione uscita dalla stazione per treni lato SX
         stationOutSx();
+        
+        // Gestione uscita dalla stazione per treni lato DX
         stationOutDx();
 
+        // DL CHECK
         if(deadline_miss(id))           printf("Deadline miss of station manager task \n");
+
+        // Attesa prossima attivazione del task
         wait_for_activation(id);
     }
 }
@@ -180,20 +179,20 @@ void binary_assignment(){
                         switch (priority) {
 
                         case HIGH_PRIO:
-                            if (trains_in_binary[3] <= trains_in_binary[2])         bin = 3;
+                            if      (trains_in_binary[3] <= trains_in_binary[2])    bin = 3;
                             else if (trains_in_binary[2] <= trains_in_binary[1])    bin = 2;
                             else if (trains_in_binary[1] <= trains_in_binary[0])    bin = 1;
                             else                                                    bin = 0;
                             break;
 
                         case MEDIUM_PRIO:
-                            if (trains_in_binary[2] <= trains_in_binary[1])         bin = 2;
+                            if      (trains_in_binary[2] <= trains_in_binary[1])    bin = 2;
                             else if (trains_in_binary[1] <= trains_in_binary[0])    bin = 1;
                             else                                                    bin = 0;
                             break;
 
                         case LOW_PRIO:
-                            if (trains_in_binary[1] <= trains_in_binary[0])         bin = 1;
+                            if      (trains_in_binary[1] <= trains_in_binary[0])    bin = 1;
                             else                                                    bin = 0;
                             break;
 
@@ -206,20 +205,20 @@ void binary_assignment(){
                         // Assegnamento binario per direzione DX-SX
                         switch (priority) {
                         case HIGH_PRIO:
-                            if (trains_in_binary[4] <= trains_in_binary[5])         bin = 4;
+                            if      (trains_in_binary[4] <= trains_in_binary[5])    bin = 4;
                             else if (trains_in_binary[5] <= trains_in_binary[6])    bin = 5;
                             else if (trains_in_binary[6] <= trains_in_binary[7])    bin = 6;
                             else                                                    bin = 7;
                             break;
 
                         case MEDIUM_PRIO:
-                            if (trains_in_binary[5] <= trains_in_binary[6])         bin = 5;
+                            if      (trains_in_binary[5] <= trains_in_binary[6])    bin = 5;
                             else if (trains_in_binary[6] <= trains_in_binary[7])    bin = 6;
                             else                                                    bin = 7;
                             break;
 
                         case LOW_PRIO:
-                            if (trains_in_binary[6] <= trains_in_binary[7])         bin = 6;
+                            if      (trains_in_binary[6] <= trains_in_binary[7])    bin = 6;
                             else                                                    bin = 7;
                             break;
 
@@ -257,94 +256,6 @@ void binary_assignment(){
         }
 }
 
-//-------------------------------------------------------------------------------------------------------------------------
-// FUNZIONE manual_binary_assignment
-// 
-// 
-//-------------------------------------------------------------------------------------------------------------------------
-void manual_binary_assignment(int binary) {
-    
-    bool    run;
-    bool    binary_assigned;
-    int     i;
-    int     bin;
-    int     trainId;
-    int     direction;
-    int     ready_trains_num_local;
-
-        
-    pthread_mutex_lock(&ready_trains_num_mutex);
-    ready_trains_num_local = ready_trains_num;
-    pthread_mutex_unlock(&ready_trains_num_mutex);
-
-
-    if(ready_trains_num_local > 0){
-
-        for (i = 0; i < ready_trains_num_local; i++){
-            
-            pthread_mutex_lock(&last_assigned_train_id_mutex);
-            trainId = last_assigned_train_id + 1;
-            pthread_mutex_unlock(&last_assigned_train_id_mutex);
-
-            pthread_mutex_lock(&train_par[trainId].mutex);
-            binary_assigned = train_par[trainId].binary_assigned;
-            direction       = train_par[trainId].direction;
-            pthread_mutex_unlock(&train_par[trainId].mutex);
-
-            if(binary_assigned == false) {
-
-                pthread_mutex_lock(&trains_in_binary_mutex);
-                switch (direction) {
-
-                case FROM_SX:
-                    bin = binary;
-                    break;
-                case FROM_DX:
-                    switch (binary) {
-                    case 0:
-                        bin = 7;
-                        break;
-                    case 1:
-                        bin = 6;
-                        break;
-                    case 2:
-                        bin = 5;
-                        break;
-                    case 3:
-                        bin = 4;
-                        break;
-                    default:
-                        break;
-                    }
-                    break;
-                default:
-                    break;
-                }
-                pthread_mutex_unlock(&trains_in_binary_mutex);
-
-                pthread_mutex_lock(&train_par[trainId].mutex);
-                train_par[trainId].binary             = bin;
-                train_par[trainId].binary_occupied    = true;
-                train_par[trainId].binary_assigned    = true;
-                pthread_mutex_unlock(&train_par[trainId].mutex);
-
-                pthread_mutex_lock(&last_assigned_train_id_mutex);
-                last_assigned_train_id = trainId;
-                pthread_mutex_unlock(&last_assigned_train_id_mutex);
-
-                pthread_mutex_lock(&ready_trains_num_mutex);
-                ready_trains_num--;
-                pthread_mutex_unlock(&ready_trains_num_mutex);
-
-                // Incremento il numero di treni che andranno alla stessa stazione
-                pthread_mutex_lock(&trains_in_binary_mutex);
-                trains_in_binary[bin]++;   
-                pthread_mutex_unlock(&trains_in_binary_mutex);                
-            }
-
-        }
-    }
-}
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE checkSemaphoreIn
 // 
@@ -612,6 +523,7 @@ void stationOutSx() {
     init_red_time = INIT_RED_TIME_SX;
     pthread_mutex_unlock(&INIT_RED_TIME_SX_MUTEX);
 
+    // Questa deve diventare una funzione valida sia per il caso destro che per il caso sinistro
     if (init_red_time == true) {
 
         pthread_mutex_lock(&last_red_time_sx_mutex);

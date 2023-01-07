@@ -25,7 +25,7 @@ void    *user_task(void *p) {
     while(EXIT == false){
         
         // Check per resettare gli ID dei nuovi treni dopo aver superato il valore massimo
-        if (next_trainId > TMAX)   next_trainId = 1;
+        if (next_trainId == TMAX)   next_trainId = 1;
 
         // PARTE 1: lettura comandi da mouse e interfaccia
         read_commands_from_mouse();
@@ -52,8 +52,6 @@ void    *user_task(void *p) {
 
 void read_commands_from_mouse() {
     int     mbutton;
-    int     x;
-    int     y;
     int     pressed_button;
     int     i;
 
@@ -62,12 +60,8 @@ void read_commands_from_mouse() {
 
     if (mbutton) {
 
-        // Coordinate del click del mouse nella finestra dell'interfaccia
-        x = mouse_x;
-        y = mouse_y - H;
-
-        // pressed button corrisponde all'ID del pulsante premuto, se ne è stato premuto uno
-        pressed_button = check_button(x, y);
+        // pressed_button corrisponde all'ID del pulsante premuto, se ne è stato premuto uno
+        pressed_button = check_button(mouse_x, mouse_y);
         
         // Azioni che vengono eseguite solo al primo click rilevato di un pulsante, in modo da evitare di ripetere
         // le operazioni se l'utente non rilascia il pulsante del mouse
@@ -151,7 +145,6 @@ void set_manual_direction(int assigned_direction){
         case FROM_DX:
             button[TRAIN_FROM_DX].button_off = from_dx_on;
             button[TRAIN_FROM_SX].button_off = from_sx_off;
-                
             printf("---------------------------------------------------------------------------- \n");
             printf("RIGHT DIRECTION SELECTED: new trains will appear only from the right side \n");
             break;
@@ -159,7 +152,6 @@ void set_manual_direction(int assigned_direction){
         case FROM_SX:
             button[TRAIN_FROM_SX].button_off = from_sx_on;
             button[TRAIN_FROM_DX].button_off = from_dx_off;
-
             printf("---------------------------------------------------------------------------- \n");
             printf("LEFT DIRECTION SELECTED: new trains will appear only from the left side \n");
             break;
@@ -180,6 +172,7 @@ void reset_random_direction(){
     ASSIGNED_DIRECTION = false;
     pthread_mutex_unlock(&ASSIGNED_DIRECTION_MUTEX);
 
+    // Reset dello stato grafico dei pulsanti
     button[TRAIN_FROM_SX].button_off = from_sx_off;
     button[TRAIN_FROM_DX].button_off = from_dx_off;
 
@@ -240,12 +233,8 @@ void read_commands_from_keyboard(){
 //--------------------------------------------------------------------------------------------------------------------------------------------
 char get_scancode() {
     
-    if(keypressed()) {
-        return readkey() >> 8;
-    }
-    else{
-        return 0;
-    }    
+    if (keypressed())   return readkey() >> 8;
+    else                return 0;    
 }
 //--------------------------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE autonomous_mode()
@@ -267,7 +256,7 @@ void autonomous_mode() {
     pthread_mutex_unlock(&last_assigned_train_from_dx_mutex);
     pthread_mutex_unlock(&last_assigned_train_from_sx_mutex);
 
-    // Aggiunge 2000 MS alla struttura temporale "last_assigned_train", quando l'istante corrente "now" supera questo valore
+    // Aggiunge 2000 MS alla struttura temporale "last_assigned_train". Quando l'istante corrente "now" supera questo valore
     // viene generato un nuovo treno random
     clock_gettime(CLOCK_MONOTONIC, &now);
     time_add_ms(&last_assigned_train, MAX_MS_BETWEEN_TRAINS);
@@ -280,21 +269,23 @@ void autonomous_mode() {
 //--------------------------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE check_button()
 //--------------------------------------------------------------------------------------------------------------------------------------------
-int check_button(int x, int y){
+int check_button(int mouse_x, int mouse_y){
     bool    pressed;
     int     i;
 
-    // Flag che viene impostata al valore "true" solo quando il click corrisponde alla posizione di un pulsante
+    // Traslo il valore di mouse_y per farlo corrispondere alle coordinate dell'interfaccia
+    mouse_y = mouse_y - H;
+
+    // Flag che viene impostata al valore "true" solo se il click corrisponde alla posizione di un pulsante
     pressed = false;
 
     for (i = 0; i < N_BUTTONS; i++) {
-        if (x < button[i].x_max && x > button[i].x_min &&
-            y < button[i].y_max && y > button[i].y_min) {
+        if (mouse_x < button[i].x_max && mouse_x > button[i].x_min &&
+            mouse_y < button[i].y_max && mouse_y > button[i].y_min) {
                 pressed = true;
                 break;
             }  
     }
-    if(pressed) return i;
-
-    else        return  N_BUTTONS;
+    if (pressed)    return i;
+    else            return  N_BUTTONS;
 }

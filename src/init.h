@@ -72,23 +72,22 @@
 // ------------------------------------- ASSEGANZIONE NOMI A VARIABILI NUMERICHE ------------------------------------- // 
 
 // Macchina a stati del task train
-enum train_states{
+enum train_states {
     GO_FAST     = 0,    // Andatura normale
     SLOW_DOWN   = 1,    // Rallentare prima di una fermata
     SPEED_UP    = 2,    // Acellerare dopo una fermata
-    WAIT        = 3,    // Attesa
-    STOP        = 4,    // Stop alla fermata quando il treno è il primo della coda
-    QUEUE       = 5     // All'interno di una coda
+    STOP        = 3,    // Stop alla fermata quando il treno è il primo della coda
+    QUEUE       = 4     // All'interno di una coda
 };
 
 // Direzione dei treni
-enum train_direction{
+enum train_direction {
     FROM_SX = 0,
     FROM_DX = 1
 };
 
 // Priorità dei treni
-enum train_priority{
+enum train_priority {
     HIGH_PRIO   = 3,
     MEDIUM_PRIO = 2,
     LOW_PRIO    = 1
@@ -141,7 +140,7 @@ struct button_struct {
 };
 
 // Struttura associata ad ogni stazione o semaforo
-struct station_struct{
+struct station_struct {
     bool                status;                             // Stato del semaforo: true = verde, false = rosso
     bool                move_queue;                         // Flag per indicare quando muovere la coda
     bool                trail_state;                        // Posizione del binario mobile (ON/OFF)

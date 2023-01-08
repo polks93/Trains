@@ -31,6 +31,10 @@ build/user.o: 	src/user.c src/user.h
 	mkdir -p build/
 	$(CC) -c $(CONF) $< -o $@	
 
+build/station.o: 	src/station.c src/station.h
+	mkdir -p build/
+	$(CC) -c $(CONF) $< -o $@	
+
 build/ptask.o: 	src/ptask.c src/ptask.h
 	mkdir -p build/
 	$(CC) -c $(CONF) $< -o $@		
@@ -38,6 +42,6 @@ build/ptask.o: 	src/ptask.c src/ptask.h
 
 # Executables #
 
-bin/main: build/main.o build/init.o build/functions.o build/graphics.o build/ptask.o build/user.o 
+bin/main: build/main.o build/init.o build/functions.o build/graphics.o build/ptask.o build/user.o build/station.o
 	mkdir -p bin/
 	$(CC) $^ -o $@ $(ALLEG) $(PTHREAD) $(MATH)

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #include "init.h"
-#include "functions.h"
+#include "trains.h"
 
 int main() {
     

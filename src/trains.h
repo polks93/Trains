@@ -1,12 +1,39 @@
 #include <stdbool.h>
 
-#ifndef FUNCTIONS_H
-#define FUNCTIONS_h
+#ifndef TRAINS_H
+#define TRAINS_H
 
 /**
- * Funzione che si occupa di muovere l'eventuale coda presente a una stazione
+ * Inizializza i paramentri di un nuovo task treno
  */
-void move_station_queue(int stationId);
+void set_train_parameters (int i);
+
+/**
+ * Ad ogni attivazione del task controlla se è stato assegnato un binario
+ */
+void wait_for_binary_assignement (int trainId);
+
+/**
+ * Check collisioni in ingresso alla stazione. Per evitarle genera il nuovo treno dopo 1000 ms dalla generazione 
+ * del treno precedente con la stessa direzione
+ */
+void collision_check (int trainId);
+
+int state_machin (int trainId, int direction, int curr_state);
+
+int state_go_fast (int trainId);
+
+int state_slow_down (int trainId, int direction);
+
+int state_queue(int trainId, int direction);
+
+int state_stop (int trainId);
+
+int state_speed_up (int trainId);
+
+void clear_binary (int trainId, int binary);
+
+bool out_of_bound_check(int trainId, int direction);
 
 /**
  * Train task. 
@@ -16,11 +43,6 @@ void move_station_queue(int stationId);
  * - Decide se rallentare, acellerare o muoversi alla massima velocità a seconda della condizione in cui si trova
  */
 void *train(void *p);
-
-/**
- * Inizializza i paramentri di un nuovo task treno
- */
-void set_train_parameters(int i);
 
  /** 
   * Si occupa di muovere il treno correttamente lungo il binario prestabilito
@@ -42,30 +64,10 @@ void move_diag_down(int i, int j, int inc);
  */
 void move_forward(int i, int j, int inc);
 
-
-
-/**
- * Decide quale sarà il primo treno a lasciare la stazione lato SX,
- * dopo averlo fatto cambia lo status del semaforo a cui si trova quel treno
- */
-void stationOutSx();
-
-/**
- * Decide quale sarà il primo treno a lasciare la stazione lato DX
- * dopo averlo fatto cambia lo status del semaforo a cui si trova quel treno
- */
-void stationOutDx();
-
-/**
- * Controlla se il treno si trova in prossimità della stazione
- */
-void check_station (int trainId);
-
 /**
  * Chiude tutti i thread attivi e esce dal programma
  */
 void exit_all();
-
 
 /**
  * Restituisce il segno dell'intero

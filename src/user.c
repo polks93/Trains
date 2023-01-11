@@ -6,7 +6,7 @@
 
 #include "init.h"
 #include "ptask.h"
-#include "functions.h"
+#include "trains.h"
 #include "user.h"
 
 //-------------------------------------------------------------------------------------------------------------------------

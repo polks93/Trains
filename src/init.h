@@ -45,8 +45,8 @@
 #define     TRAIN_SPACE                         (TRAIN_W + WAGONS_SPACE + 2)*WAGONS     // Ingombro del treno
 #define     STOP_SPACE                          TRAIN_W                                 // Spazio tra "testa" del treno e coordinata di stop
 #define     SLOW_DOWN_SPACE                     4*TRAIN_W                               // Lunghezza dello spazio in cui il treno deve frenare prima dello stop
-#define     MAX_VEL                             150                                     // Velocità massima del treno                                     
-#define     MAX_ACC                             100                                     // Acellerazione massima del treno
+#define     MAX_VEL                             200                                     // Velocità massima del treno                                     
+#define     MAX_ACC                             50                                      // Acellerazione massima del treno
 #define     MIN_MS_BETWEEN_TRAINS               1000                                    // Minimi MS tra un treno e il successivo
 #define     MAX_MS_BETWEEN_TRAINS               2000                                    // MS tra un treno e l'altro in caso di modalità automatica
 
@@ -67,7 +67,7 @@
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_ON        32                      // Posizione angolare dei binari mobili
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_OFF       0                       // Posizione angolare dei binari mobili
 #define     TRAIL_ANGLE_INC                     4                       // Velocità angolare dei binari mobili
-#define     STOP_TIME                           2000                    // Tempo massimo di stop alla stazione
+#define     STOP_TIME                           1000                    // Tempo massimo di stop alla stazione
 
 // ------------------------------------- ASSEGANZIONE NOMI A VARIABILI NUMERICHE ------------------------------------- // 
 

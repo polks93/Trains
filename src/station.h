@@ -52,6 +52,11 @@ void queue_manager();
 void move_semaphore_queue (int semId);
 
 /**
+ * Funzione che si occupa di muovere l'eventuale coda presente a una stazione
+ */
+void move_station_queue(int stationId);
+
+/**
  * Muove i binari mobili prima della stazione
  */
 void move_trail_before_station (int semId, int SemRequiredState);
@@ -89,6 +94,94 @@ void red_time_initialize (int trainId);
  * Azioni da eseguire quando il treno si deve fermare al semaforo
  */
 void stop_at_station(int trainId);
+
+/**
+ * Decide quale sarà il primo treno a lasciare la stazione lato SX.
+ * Dopo averlo fatto cambia lo status del semaforo a cui si trova quel treno e muove i binari
+ * nella posizione appropriata
+ */
+void manage_station_out_SX();
+
+/**
+ * Decide quale sarà il primo treno a lasciare la stazione lato DX.
+ * Dopo averlo fatto cambia lo status del semaforo a cui si trova quel treno e muove i binari
+ * nella posizione appropriata
+ */
+void manage_station_out_DX();
+
+/**
+ * Controlla se è il momento di far diventare verde il semaforo della stazione col treno a 
+ * massima priorità tra quelli con la stessa direzione
+ */
+bool check_green_time (int direction);
+
+/**
+ * Cerca il treno a priorità maggiore tra quelli in attesa
+ */
+int search_for_max_prio_train (int direction);
+
+/**
+ * Manda il comando per muovere i binari mobili in uscita dalla stazione
+ */
+void send_command_to_move_trails_out (int direction, int trainId);
+
+/**
+ * Controlla se ci sono altre stazioni in attesa
+ */
+void check_other_station_waiting(int direction);
+
+/**
+ * Legge se è stato inviato il segnale di muovere i binari
+ */
+bool read_command_to_move_trails (int direction);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_0(int posx);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_1(int posx);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_2(int posx);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_3(int posx);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_4(int posx);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_5(int posx);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_6(int posx);
+
+/**
+ * Funzione che muove i binari nella posizione corretta a seconda del binario da cui
+ * sta partendo il treno
+ */
+void move_trails_out_bin_7(int posx);
 
 /**
  * Station manager task

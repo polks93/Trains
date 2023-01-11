@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
+
 #include "ptask.h"
-
-
-
 //------------------------------------------------------------------------------
 // FUNZIONE task_create
 //

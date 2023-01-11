@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include <stdio.h>
 
-#include "functions.h"
 #include "ptask.h"
 #include "init.h"
 #include "station.h"
@@ -475,6 +474,65 @@ void move_semaphore_queue (int semId) {
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_station_queue
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_station_queue(int stationId){
+
+    struct  timespec now;
+    int     i;
+    int     trainId;
+    int     queue;
+    int     direction;
+
+    // In base all'Id della stazione capisco la direzione del treno
+    if (stationId < 4)      direction = FROM_SX;
+    else                    direction = FROM_DX;
+
+    // Salvo in locale la lunghezza della coda presente in stazione
+    pthread_mutex_lock(&station[stationId].mutex);
+    queue = station[stationId].queue;
+    pthread_mutex_unlock(&station[stationId].mutex);
+
+    // Muove la coda
+    for (i = 1; i <= queue; i++) {
+
+        pthread_mutex_lock(&station[stationId].mutex);
+        station[stationId].queue_list[i-1] = station[stationId].queue_list[i];
+        trainId = station[stationId].queue_list[i-1];
+        pthread_mutex_unlock(&station[stationId].mutex);
+
+        // Esegue queste operazioni solo se c'è un altro treno in coda
+        if (trainId != 0) {
+            pthread_mutex_lock(&train_par[trainId].mutex);
+            train_par[trainId].ready_to_go_from_queue = true;
+            pthread_mutex_unlock(&train_par[trainId].mutex);
+        }
+    }
+
+    pthread_mutex_lock(&station[stationId].mutex);
+    station[stationId].move_queue   =  false;
+    station[stationId].queue        --;
+
+    switch (direction) {
+
+    case FROM_DX:
+        station[stationId].xPointIn     -= TRAIN_SPACE;
+        station[stationId].xPointStop   -= TRAIN_SPACE;
+        break;
+
+    case FROM_SX:
+        station[stationId].xPointIn     += TRAIN_SPACE;
+        station[stationId].xPointStop   += TRAIN_SPACE;
+        break;
+
+    default:
+        break;
+    }
+    pthread_mutex_unlock(&station[stationId].mutex);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE move_trail_before_station
 //-------------------------------------------------------------------------------------------------------------------------
 
@@ -574,6 +632,7 @@ void move_first_train_in_sem_queue (int semId) {
 //-------------------------------------------------------------------------------------------------------------------------
 
 void check_station(int trainId) {
+
     bool    checked;
     bool    station_passed;
     bool    semaphore_flag;
@@ -593,9 +652,6 @@ void check_station(int trainId) {
         
         // Check se il treno si trova nel range della stazione
         train_in_station    = check_station_range(trainId);
-
-        // Check se il timer per il semaforo rosso è già stato inizializzato
-        init_red_time       = check_init_red_time(trainId);
         
         // Se il treno si trova in stazione e non l'ha ancora superata, deve fermarsi e il sem deve diventare rosso
         if (train_in_station == true && station_passed == false) {
@@ -610,6 +666,9 @@ void check_station(int trainId) {
                 
                 // Procedura di fermata alla stazione
                 stop_at_station(trainId);
+                
+                // Check se il timer per il semaforo rosso è già stato inizializzato
+                init_red_time = check_init_red_time(trainId);
 
                 // Eventuale inizializzazzione del timer per il semaforo rosso
                 if (init_red_time == false)     red_time_initialize(trainId);
@@ -797,6 +856,735 @@ void red_time_initialize (int trainId) {
             break;    
     }
 }
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE manage_station_out_SX
+//-------------------------------------------------------------------------------------------------------------------------
+
+void manage_station_out_SX() {
+    
+    bool    ready_to_go;
+    bool    move_trails;
+    int     trainId;
+    int     binary;
+    int     posx;
+    int     direction;
+
+    // Definisco la direzione dei treni da controllare
+    direction = FROM_SX;
+
+    // Check se è il momento di far diventare un semaforo verde
+    ready_to_go = check_green_time(direction);
+
+    if (ready_to_go == true) {
+
+        // Id del treno a prio massima tra quelli in attesa
+        trainId = search_for_max_prio_train(direction);
+
+        // Se trovo un treno valido, segnalo di muovere i binari
+        if (trainId != 0)   send_command_to_move_trails_out(direction, trainId);
+
+        // Se ci sono altri semafori rossi a questo punto, aggiorno l'istante in cui il prossimo sem deve diventare verde
+        check_other_station_waiting(direction);
+    }
+    
+    // Leggo il comando di muovere i binari
+    move_trails = read_command_to_move_trails(direction);
+
+    if (move_trails == true) {
+
+        // Import delle variabili globali
+        pthread_mutex_lock(&max_prio_train_sx_mutex);
+        trainId = max_prio_train_sx;
+        pthread_mutex_unlock(&max_prio_train_sx_mutex);
+
+        pthread_mutex_lock(&train_par[trainId].mutex);
+        binary  = train_par[trainId].binary;
+        posx    = train_par[trainId].posx;
+        pthread_mutex_unlock(&train_par[trainId].mutex);
+
+        // Spostamento dei binari in modo coerente col binario in cui si trova il treno
+        switch (binary) {
+            case 0:
+                move_trails_out_bin_0(posx);
+                break;
+            
+            case 1:
+                move_trails_out_bin_1(posx);
+                break;
+
+            case 2:
+                move_trails_out_bin_2(posx);
+                break;
+
+            case 3:
+                move_trails_out_bin_3(posx);
+                break;
+
+            default:
+            break;
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE manage_station_out_DX
+//-------------------------------------------------------------------------------------------------------------------------
+void manage_station_out_DX(){
+
+    bool    ready_to_go;
+    bool    move_trails;
+    int     trainId;
+    int     binary;
+    int     posx;
+    int     direction;
+
+    // Definisco la direzione dei treni da controllare
+    direction = FROM_DX;
+    
+    // Check se è il momento di far diventare un semaforo verde
+    ready_to_go = check_green_time(direction);
+
+    if (ready_to_go == true) {
+
+        // Id del treno a prio massima tra quelli in attesa
+        trainId = search_for_max_prio_train(direction);
+
+        // Se trovo un treno valido, segnalo di muovere i binari
+        if (trainId != 0)       send_command_to_move_trails_out(direction, trainId);
+
+        // Se ci sono altri semafori rossi a questo punto, aggiorno l'istante in cui il prossimo sem deve diventare verde
+        check_other_station_waiting(direction);
+    }
+
+    // Leggo il comando di muovere i binari
+    move_trails = read_command_to_move_trails(direction);
+
+    if (move_trails == true) {
+
+        // Import delle variabili globali
+        pthread_mutex_lock(&max_prio_train_dx_mutex);
+        trainId = max_prio_train_dx;
+        pthread_mutex_unlock(&max_prio_train_dx_mutex);
+
+        pthread_mutex_lock(&train_par[trainId].mutex);
+        binary  = train_par[trainId].binary;                    // Binario del treno che deve lasciare la stazione
+        posx    = train_par[trainId].posx;                      // Posizione lungo X del treno che deve lasciare la stazione
+        pthread_mutex_unlock(&train_par[trainId].mutex);
+
+        // Spostamento dei binari in modo coerente col binario in cui si trova il treno
+        switch (binary) {
+                
+            case 4:
+                move_trails_out_bin_4(posx);
+                break;
+
+            case 5:
+                move_trails_out_bin_5(posx);
+                break;
+
+            case 6:
+                move_trails_out_bin_6(posx);
+                break;
+
+            case 7:
+                move_trails_out_bin_7(posx);
+                break;
+            
+            default:
+            break;
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE check_green_time
+//-------------------------------------------------------------------------------------------------------------------------
+
+bool check_green_time (int direction) {
+
+    bool    init_red_time;
+    bool    ready_to_go;
+    struct  timespec    now;
+    struct  timespec    leave_time;
+
+    ready_to_go = false;
+
+    // Leggo l'istante attuale
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    switch (direction) {
+    
+    case FROM_SX:
+
+        // Check per vedere se il timer SX è stato inizializzato
+        pthread_mutex_lock(&INIT_RED_TIME_SX_MUTEX);
+        init_red_time = INIT_RED_TIME_SX;
+        pthread_mutex_unlock(&INIT_RED_TIME_SX_MUTEX);
+
+        if (init_red_time == true) {
+            
+            // Copio in locale l'istante in cui il primo semaforo SX è diventato rosso
+            pthread_mutex_lock(&last_red_time_sx_mutex);
+            time_copy(&leave_time, last_red_time_sx);
+            pthread_mutex_unlock(&last_red_time_sx_mutex);
+
+            // Ottengo l'istante in cui il sem deve diventare verde aggiungendo STOP_TIME all'istante copiato precedentemente
+            time_add_ms(&leave_time, STOP_TIME);
+
+            // Se "now" è maggiore di "leave_time" e la variabile "READY_TO_GO_SX" è settata al valore "true" segnalo che il treno è pronto a partire
+            // READY_TO_GO_SX serve a evitare che il semaforo diventi verde prima che il treno precedente abbia lasciato la stazione
+            pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+            if (time_cmp(now, leave_time) > 0 && READY_TO_GO_SX == true)        ready_to_go = true;
+            pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+        }
+        break;
+    
+    case FROM_DX:
+
+        // Check per vedere se il timer DX è stato inizializzato
+        pthread_mutex_lock(&INIT_RED_TIME_DX_MUTEX);
+        init_red_time = INIT_RED_TIME_DX;
+        pthread_mutex_unlock(&INIT_RED_TIME_DX_MUTEX);
+
+        if (init_red_time == true) {
+
+            // Copio in locale l'istante in cui il primo semaforo DX è diventato rosso
+            pthread_mutex_lock(&last_red_time_dx_mutex);
+            time_copy(&leave_time, last_red_time_dx);
+            pthread_mutex_unlock(&last_red_time_dx_mutex);
+
+            // Ottengo l'istante in cui il sem deve diventare verde aggiungendo STOP_TIME all'istante copiato precedentemente
+            time_add_ms(&leave_time, STOP_TIME);
+
+            // Se "now" è maggiore di "leave_time"  segnalo che il treno è pronto a partire
+            pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+            if (time_cmp(now, leave_time) > 0 && READY_TO_GO_DX == true)        ready_to_go = true;
+            pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+        }
+        break;
+    default:
+        break;
+    }
+    return      ready_to_go;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE search_for_max_prio_train
+//-------------------------------------------------------------------------------------------------------------------------
+int search_for_max_prio_train (int direction) {
+
+    int     stationId;
+    int     train_id;
+    int     priority;
+    int     binary;
+    int     max_priority_train_id;
+    int     max_priority;
+    int     max_priority_train_bin;
+    int     first_station;
+
+    // Init delle variabili
+    max_priority_train_id   = 0;
+    max_priority            = 0;
+
+    if (direction == FROM_SX) {
+        first_station           = 0;            // Se la direzione è SX controllo le stazioni 0, 1, 2, 3
+        max_priority_train_bin  = 0;            // In caso di treni a priorità uguale, scelgo quello con binario maggiore quindi devo inizializzare a 0 questa variabile (valore minimo)
+    }
+
+    else {                        
+        first_station           = 4;            // Se la direzione è DX controllo le stazioni 4, 5, 6, 7
+        max_priority_train_bin  = 7;            // In caso di treni a priorità uguale, scelgo quello con binario maggiore quindi devo inizializzare a 7 questa variabile (valore massimo)
+    }
+
+    // Check delle 4 stazioni
+    for (stationId = first_station; stationId <= first_station + 3; stationId ++) {
+        
+        pthread_mutex_lock(&station[stationId].mutex);
+        train_id = station[stationId].queue_list[0];        // Id del primo treno in coda a ciascuna stazione
+        pthread_mutex_unlock(&station[stationId].mutex);
+
+        pthread_mutex_lock(&train_par[train_id].mutex);
+        priority    = train_par[train_id].priority;         // Priorità di trainId
+        binary      = train_par[train_id].binary;           // Binario di trainID
+        pthread_mutex_unlock(&train_par[train_id].mutex);
+
+        if (priority > max_priority ||                                                                      
+            priority == max_priority && binary > max_priority_train_bin && direction == FROM_SX ||      // FROM_SX: In caso di priorità uguali, predilige quello con binario maggiore
+            priority == max_priority && binary < max_priority_train_bin && direction == FROM_DX) {      // FROM_DX: In caso di priorità uguali, predilige quello con binario minore
+
+            max_priority            = priority;
+            max_priority_train_id   = train_id;
+            max_priority_train_bin  = binary;
+        }
+    }
+    return      max_priority_train_id;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE check_other_station_waiting
+//-------------------------------------------------------------------------------------------------------------------------
+
+void check_other_station_waiting(int direction){
+
+    bool    another_station_waiting;
+    bool    station_status;
+    int     stationId;
+    int     first_station;
+
+    if (direction == FROM_SX)       first_station = 0;                  // Se la direzione è SX controllo le stazioni 0, 1, 2, 3
+    else                            first_station = 4;                  // Se la direzione è DX controllo le stazioni 4, 5, 6, 7
+
+    // Check delle 4 stazioni
+    for (stationId = first_station; stationId <= first_station + 3; stationId ++) {
+
+        pthread_mutex_lock(&station[stationId].mutex);
+        station_status = station[stationId].status;         // Status della stazione 
+        pthread_mutex_unlock(&station[stationId].mutex);
+        
+        // Se trovo almeno un altro semaforo rosso, esco dal ciclo e lo segnalo 
+        if (station_status == false) {
+            another_station_waiting = true;
+            break;
+        }
+    }
+
+    switch (direction) {
+
+    case FROM_SX:
+        
+        // Se un'altra stazione è in attesa, segnalo che il prossimo sem SX deve diventare verde dopo STOP_TIME
+        if (another_station_waiting == true) {
+            pthread_mutex_lock(&last_red_time_sx_mutex);
+            time_add_ms(&last_red_time_sx, STOP_TIME);
+            pthread_mutex_unlock(&last_red_time_sx_mutex);
+        }
+
+        // Se nessuna stazione è in attesa, resetto il timer SX
+        else {
+            pthread_mutex_lock(&INIT_RED_TIME_SX_MUTEX);
+            INIT_RED_TIME_SX = false;
+            pthread_mutex_unlock(&INIT_RED_TIME_SX_MUTEX);
+        }
+        break;
+
+    case FROM_DX:
+
+        // Se un'altra stazione è in attesa, segnalo che il prossimo sem DX deve diventare verde dopo STOP_TIME
+        if (another_station_waiting == true) {
+            pthread_mutex_lock(&last_red_time_dx_mutex);
+            time_add_ms(&last_red_time_dx, STOP_TIME);
+            pthread_mutex_unlock(&last_red_time_dx_mutex);
+        }
+
+        // Se nessuna stazione è in attesa, resetto il timer DX
+        else {
+            pthread_mutex_lock(&INIT_RED_TIME_DX_MUTEX);
+            INIT_RED_TIME_DX = false;
+            pthread_mutex_unlock(&INIT_RED_TIME_DX_MUTEX);
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE read_command_to_move_trails
+//-------------------------------------------------------------------------------------------------------------------------
+
+bool read_command_to_move_trails (int direction){
+
+    bool    move_trails;
+
+    // A seconda della direzione, leggo il valore globale che sengala se devo muovere i binari
+    switch (direction) {
+
+    case FROM_SX:
+        pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+        move_trails = MOVE_TRAILS_SX;
+        pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+        break;
+    
+    case FROM_DX:
+        pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+        move_trails = MOVE_TRAILS_DX;
+        pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+        break;
+    default:
+        break;
+    }
+    return      move_trails;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE send_command_to_move_trails_out
+//-------------------------------------------------------------------------------------------------------------------------
+
+void send_command_to_move_trails_out (int direction, int trainId) {
+
+    int stationId;
+    
+    pthread_mutex_lock(&train_par[trainId].mutex);
+    stationId = train_par[trainId].binary;                      // Stazione a cui si trova il treno trainId
+    pthread_mutex_unlock(&train_par[trainId].mutex);
+
+    pthread_mutex_lock(&station[stationId].mutex);
+    station[stationId].status = true;                           // Semaforo della stazione diventa verde
+    pthread_mutex_unlock(&station[stationId].mutex);
+
+    pthread_mutex_lock(&train_par[trainId].mutex);
+    train_par[trainId].station_passed[stationId] = true;        // Segnalo che il treno ha superato la stazione
+    pthread_mutex_unlock(&train_par[trainId].mutex);
+
+    switch (direction) {
+
+    case FROM_SX:    
+
+        // Segnalo che i binari mobili in uscita dalla stazoni dei treni che vengono da SX si devono muovere
+        pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+        MOVE_TRAILS_SX = true;
+        pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+        // Finchè i binari non hanno finito di muoversi, i treni da SX non possono muoversi
+        pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);            
+        READY_TO_GO_SX = false;
+        pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+
+        // Salvo in globale il valore del treno a priorità massima lato SX
+        pthread_mutex_lock(&max_prio_train_sx_mutex);
+        max_prio_train_sx = trainId;
+        pthread_mutex_unlock(&max_prio_train_sx_mutex);
+        break;
+
+    case FROM_DX:
+
+        // Segnalo che i binari mobili in uscita dalla stazoni dei treni che vengono da DX si devono muovere
+        pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+        MOVE_TRAILS_DX = true;
+        pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+        // Finchè i binari non hanno finito di muoversi, i treni da DX non possono muoversi
+        pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);            
+        READY_TO_GO_DX = false;
+        pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+
+        // Salvo in globale il valore del treno a priorità massima lato DX
+        pthread_mutex_lock(&max_prio_train_dx_mutex);
+        max_prio_train_dx = trainId;
+        pthread_mutex_unlock(&max_prio_train_dx_mutex);
+        break;
+
+    default:
+        break;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin0
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_0(int posx){
+
+    pthread_mutex_lock(&semaphores[5].mutex);
+    semaphores[5].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[5].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {           // Se supero il valore massimo, reset a quel valore
+        semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
+    }
+
+    // Quando il binario ha finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato SX
+    if (semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON && 
+        posx >= W - 1.5*SPACE) {
+
+        pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+        MOVE_TRAILS_SX = false;
+        pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+        pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+        READY_TO_GO_SX = true;
+        pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+    }
+    pthread_mutex_unlock(&semaphores[5].mutex);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin1
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_1(int posx){
+
+    pthread_mutex_lock(&semaphores[4].mutex);
+    pthread_mutex_lock(&semaphores[5].mutex);
+
+    semaphores[4].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[4].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {           // Se supero il valore massimo, reset a quel valore
+        semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
+    } 
+
+    semaphores[5].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {          // Se supero il valore massimo, reset a quel valore
+        semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
+    }
+
+    // Quando i binari hanno finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato SX
+    if (semaphores[4].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON && 
+        semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+        posx >= W - 1.5*SPACE) {            
+        
+        pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+        MOVE_TRAILS_SX = false;
+        pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+        pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+        READY_TO_GO_SX = true;
+        pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+    }
+
+    pthread_mutex_unlock(&semaphores[5].mutex);
+    pthread_mutex_unlock(&semaphores[4].mutex);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin2
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_2(int posx){
+
+    pthread_mutex_lock(&semaphores[3].mutex);
+    pthread_mutex_lock(&semaphores[4].mutex);
+    pthread_mutex_lock(&semaphores[5].mutex);
+
+    semaphores[3].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[3].trail_angle > TRAIL_UP_BIN_OUT_SWITCH_ON) {           // Se supero il valore massimo, reset a quel valore
+        semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_ON;
+    }
+
+    semaphores[4].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {          // Se supero il valore massimo, reset a quel valore
+        semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
+    }
+
+    semaphores[5].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {          // Se supero il valore massimo, reset a quel valore
+        semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
+    }
+
+    // Quando i binari hanno finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato SX
+    if (semaphores[3].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_ON && 
+        semaphores[4].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+        semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+        posx >= W - 1.5*SPACE) {
+            
+        pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+        MOVE_TRAILS_SX = false;
+        pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+        
+        pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+        READY_TO_GO_SX = true;
+        pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+    }
+    pthread_mutex_unlock(&semaphores[3].mutex);
+    pthread_mutex_unlock(&semaphores[4].mutex);
+    pthread_mutex_unlock(&semaphores[5].mutex);  
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin3
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_3(int posx){
+
+    pthread_mutex_lock(&semaphores[3].mutex);
+    pthread_mutex_lock(&semaphores[4].mutex);
+    pthread_mutex_lock(&semaphores[5].mutex);
+
+    semaphores[3].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[3].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {          // Se supero il valore massimo, reset a quel valore
+        semaphores[3].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
+    }
+
+    semaphores[4].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[4].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {          // Se supero il valore massimo, reset a quel valore
+        semaphores[4].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
+    } 
+
+    semaphores[5].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[5].trail_angle < TRAIL_UP_BIN_OUT_SWITCH_OFF) {          // Se supero il valore massimo, reset a quel valore
+        semaphores[5].trail_angle = TRAIL_UP_BIN_OUT_SWITCH_OFF;
+    }
+
+    // Quando i binari hanno finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato SX
+    if (semaphores[3].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF && 
+        semaphores[4].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+        semaphores[5].trail_angle == TRAIL_UP_BIN_OUT_SWITCH_OFF &&
+        posx >= W - 1.5*SPACE) {
+            
+            pthread_mutex_lock(&MOVE_TRAILS_SX_MUTEX);
+            MOVE_TRAILS_SX = false;
+            pthread_mutex_unlock(&MOVE_TRAILS_SX_MUTEX);
+
+            pthread_mutex_lock(&READY_TO_GO_SX_MUTEX);
+            READY_TO_GO_SX = true;
+            pthread_mutex_unlock(&READY_TO_GO_SX_MUTEX);
+        }
+        pthread_mutex_unlock(&semaphores[3].mutex);
+        pthread_mutex_unlock(&semaphores[4].mutex);
+        pthread_mutex_unlock(&semaphores[5].mutex);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin4
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_4(int posx){
+
+    pthread_mutex_lock(&semaphores[6].mutex);
+    pthread_mutex_lock(&semaphores[7].mutex);
+    pthread_mutex_lock(&semaphores[8].mutex);
+
+    semaphores[6].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[6].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {        // Se supero il valore massimo, reset a quel valore
+        semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+    }
+
+    semaphores[7].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[7].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {        // Se supero il valore massimo, reset a quel valore
+        semaphores[7].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+    } 
+
+    semaphores[8].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[8].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {        // Se supero il valore massimo, reset a quel valore
+        semaphores[8].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+    }
+
+    // Quando i binari hanno finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato DX
+    if (semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF && 
+        semaphores[7].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+        semaphores[8].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+        posx <= 1.5*SPACE) {
+        
+        pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+        MOVE_TRAILS_DX = false;
+        pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+        pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+        READY_TO_GO_DX = true;
+        pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+    }
+    pthread_mutex_unlock(&semaphores[6].mutex);
+    pthread_mutex_unlock(&semaphores[7].mutex);
+    pthread_mutex_unlock(&semaphores[8].mutex);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin5
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_5(int posx){
+
+    pthread_mutex_lock(&semaphores[6].mutex);
+    pthread_mutex_lock(&semaphores[7].mutex);
+    pthread_mutex_lock(&semaphores[8].mutex);
+
+    semaphores[6].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[6].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {        // Se supero il valore massimo, reset a quel valore
+        semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+    }
+    semaphores[7].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[7].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {        // Se supero il valore massimo, reset a quel valore
+        semaphores[7].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+    }
+    semaphores[8].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[8].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_ON) {         // Se supero il valore massimo, reset a quel valore
+        semaphores[8].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_ON;
+    }
+
+    // Quando i binari hanno finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato DX
+    if (semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF && 
+        semaphores[7].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+        semaphores[8].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_ON &&
+        posx < 1.5*SPACE) {
+            
+        pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+        MOVE_TRAILS_DX = false;
+        pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+        
+        pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+        READY_TO_GO_DX = true;
+        pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+    }
+    pthread_mutex_unlock(&semaphores[6].mutex);
+    pthread_mutex_unlock(&semaphores[7].mutex);
+    pthread_mutex_unlock(&semaphores[8].mutex); 
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin6
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_6(int posx){
+
+    pthread_mutex_lock(&semaphores[7].mutex);
+    pthread_mutex_lock(&semaphores[6].mutex);
+
+    semaphores[7].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[7].trail_angle > TRAIL_DOWN_BIN_OUT_SWITCH_ON) {         // Se supero il valore massimo, reset a quel valore
+        semaphores[7].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_ON;
+    } 
+
+    semaphores[6].trail_angle -= TRAIL_ANGLE_INC;                           // Rotazione anti-oraria
+    if (semaphores[6].trail_angle < TRAIL_DOWN_BIN_OUT_SWITCH_OFF) {        // Se supero il valore massimo, reset a quel valore
+        semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_OFF;
+    }
+
+    // Quando i binari hanno finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato DX
+    if (semaphores[7].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_ON && 
+        semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_OFF &&
+        posx < 1.5*SPACE) {
+        
+        pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+        MOVE_TRAILS_DX = false;
+        pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+        pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+        READY_TO_GO_DX = true;
+        pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+
+    }
+
+    pthread_mutex_unlock(&semaphores[7].mutex);
+    pthread_mutex_unlock(&semaphores[6].mutex);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE move_trails_out_bin7
+//-------------------------------------------------------------------------------------------------------------------------
+
+void move_trails_out_bin_7(int posx){
+
+    pthread_mutex_lock(&semaphores[6].mutex);
+
+    semaphores[6].trail_angle += TRAIL_ANGLE_INC;                           // Rotazione oraria
+    if (semaphores[6].trail_angle >= TRAIL_DOWN_BIN_OUT_SWITCH_ON) {        // Se supero il valore massimo, reset a quel valore
+        semaphores[6].trail_angle = TRAIL_DOWN_BIN_OUT_SWITCH_ON;
+    }
+
+    // Quando il binario ha finito di muoversi E il treno ha superato tutti i binari mobili, segnalo che posso gestire il prossimo treno lato DX
+    if (semaphores[6].trail_angle == TRAIL_DOWN_BIN_OUT_SWITCH_ON && 
+        posx < 1.5*SPACE) {
+
+        pthread_mutex_lock(&MOVE_TRAILS_DX_MUTEX);
+        MOVE_TRAILS_DX = false;
+        pthread_mutex_unlock(&MOVE_TRAILS_DX_MUTEX);
+
+        pthread_mutex_lock(&READY_TO_GO_DX_MUTEX);
+        READY_TO_GO_DX = true;
+        pthread_mutex_unlock(&READY_TO_GO_DX_MUTEX);
+    }
+    pthread_mutex_unlock(&semaphores[6].mutex);
+}
+
 //-------------------------------------------------------------------------------------------------------------------------
 // TASK station_manager
 //-------------------------------------------------------------------------------------------------------------------------
@@ -818,9 +1606,9 @@ void *station_manager(void *p){
         //GESTIONE CODE DEI SEMAFORI E DELLE STAZIONI
         queue_manager();
         
-        // FINZIONI CHE RICERCANO IL PRIMO TRENO DA FAR PARTIRE TRA QUELLI FERMI IN STAZIONE
-        stationOutSx();
-        stationOutDx();
+        // FINZIONI CHE RICERCANO IL PRIMO TRENO DA FAR PARTIRE TRA QUELLI FERMI IN STAZIONE LATO SX E DX
+        manage_station_out_SX();
+        manage_station_out_DX();
 
         // CHECK DL MISS DEL TASK STATION MANAGER
         if(deadline_miss(id))           printf("Deadline miss of station manager task \n");

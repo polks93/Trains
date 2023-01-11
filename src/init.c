@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "ptask.h"
-#include "functions.h"
+#include "trains.h"
 #include "init.h"
 #include "user.h"
 #include "station.h"
@@ -314,4 +314,19 @@ void buttons_init() {
     button[8].x_max         = button[8].x_min + L_BUTTONS;
     button[8].y_min         = SPACE_BUTTONS;
     button[8].y_max         = SPACE_BUTTONS + L_BUTTONS;
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+// FUNZIONE exit_all
+//--------------------------------------------------------------------------------------------------------------------------------------------
+
+void exit_all(){
+
+    int i;
+
+    EXIT = true;
+
+    for (i = 0; i <= TMAX + 2; i++)         pthread_join(tid[i],NULL);
+    allegro_exit(); 
+    printf("All tasks closed!\n");
 }

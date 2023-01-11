@@ -329,4 +329,9 @@ void stations_struct_init();
  */
 void buttons_init();
 
+/**
+ * Chiude tutti i thread attivi e esce dal programma
+ */
+void exit_all();
+
 #endif

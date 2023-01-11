@@ -284,8 +284,19 @@ int state_slow_down (int trainId, int direction) {
             // Se supero la linea di stop, cambio stato
             if (posx <= stop_x) {
                 
-                if (first_of_queue == true)      next_state = STOP;     // STOP se il treno è il primo della coda
-                else                             next_state = QUEUE;    // QUEUE se il treno deve muoversi in coda
+                if (first_of_queue == true) {
+
+                    next_state = STOP;                                                          // STOP se il treno è il primo della coda
+
+                    // Salvo l'istante in cui il treno passa allo stato STOP e a quel momento aggiungo MAX_WAITING_TIME.
+                    // Quando il treno si trova fermo in testa alla coda della stazione per un tempo maggiore di MAX_WAITING_TIME
+                    // la sua priorità verrà aumentata
+                    pthread_mutex_lock(&train_par[trainId].mutex);
+                    clock_gettime(CLOCK_MONOTONIC, &train_par[trainId].waiting_in_station);
+                    time_add_ms(&train_par[trainId].waiting_in_station, MAX_WAITING_TIME);
+                    pthread_mutex_unlock(&train_par[trainId].mutex);
+                }
+                else next_state = QUEUE;                                                        // QUEUE se il treno deve muoversi in coda
             }
             break;
 
@@ -293,8 +304,19 @@ int state_slow_down (int trainId, int direction) {
         
             // Se supero la linea di stop, cambio stato
             if (posx >= stop_x ) {
-                if (first_of_queue == true)     next_state = STOP;      // STOP se il treno è il primo della coda
-                else                            next_state = QUEUE;     // QUEUE se il treno deve muoversi in coda
+                if (first_of_queue == true) {
+
+                    next_state = STOP;                                                          // STOP se il treno è il primo della coda
+                    
+                    // Salvo l'istante in cui il treno passa allo stato STOP e a quel momento aggiungo MAX_WAITING_TIME.
+                    // Quando il treno si trova fermo in testa alla coda della stazione per un tempo maggiore di MAX_WAITING_TIME
+                    // la sua priorità verrà aumentata
+                    pthread_mutex_lock(&train_par[trainId].mutex);
+                    clock_gettime(CLOCK_MONOTONIC, &train_par[trainId].waiting_in_station);
+                    time_add_ms(&train_par[trainId].waiting_in_station, MAX_WAITING_TIME);
+                    pthread_mutex_unlock(&train_par[trainId].mutex);
+                }
+                else next_state = QUEUE;                                                        // QUEUE se il treno deve muoversi in coda
             }
             break;
 
@@ -359,13 +381,19 @@ int state_stop (int trainId) {
     int     next_state;
     int     stop_id;
     int     stop_type;
+    struct  timespec    now;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
     
     // Init di next_state
     next_state = STOP;
 
     pthread_mutex_lock(&train_par[trainId].mutex);
-    stop_id     = train_par[trainId].stop_id;                       // Id dello stop
-    stop_type   = train_par[trainId].stop_type;                     // Tipo di stop SEMAPHORE/STATION
+    stop_id     = train_par[trainId].stop_id;       // Id dello stop
+    stop_type   = train_par[trainId].stop_type;     // Tipo di stop SEMAPHORE/STATION
+
+    // Check: se il treno sta aspettando in testa alla stazione per più di MAX_WAITING_TIME imposto la sua priorità al massimo
+    if (time_cmp(now, train_par[trainId].waiting_in_station) > 0)       train_par[trainId].priority = HIGH_PRIO;
     pthread_mutex_unlock(&train_par[trainId].mutex);      
 
     if (stop_type == STATION) {
@@ -496,22 +524,30 @@ int find_step (int trainId, int vel, float acc) {
     int     step;
     int     deltaVel;
 
-    periodS     = (float) TRAIN_TASK_PERIOD / 1000.0;
+    // Periodo in secondi del task treno
+    periodS     = (float) TRAIN_TASK_PERIOD / 1000.0;           
 
+    // Incremento di velocità
     deltaVel    = acc * periodS;
+
+    // Update valore locale velocità
     vel         = vel + deltaVel;
 
+    // Check per evitare che la velocità superi il valore massimo o il valore minimo
     if (vel > MAX_VEL)   vel = MAX_VEL;
     if (vel < 0)         vel = 0;
     
+    // Update valore globale della velocità
     pthread_mutex_lock(&train_par[trainId].mutex);
     train_par[trainId].currentVel = vel;
     pthread_mutex_unlock(&train_par[trainId].mutex);
 
+    // Caclolo dello step in pixel del treno
     step = round(vel * periodS);
 
     return step;
 }
+
 //-------------------------------------------------------------------------------------------------------------------------
 // FUNZIONE wagons_realignment
 //-------------------------------------------------------------------------------------------------------------------------
@@ -525,25 +561,30 @@ void wagons_realignment (int trainId, int wagonId, int wagon_posx, int binary) {
     switch (direction) {
 
         case FROM_SX:
-
+            // Vagone che si trova nella parte centrale orizzontale
             if (wagon_posx < trails_xPoints[binary][2] + round(TRAIN_W*sqrt(2)/2)   &&   wagon_posx > trails_xPoints[binary][1]) {
-                train_par[trainId].wagons[wagonId].posy = (binary + 1)*SPACE - TRAIN_H/2;
+                train_par[trainId].wagons[wagonId].posy = (binary + 1)*SPACE - TRAIN_H/2;       // Riallineamento coordinata Y
 
             }
+            
+            // Vagone che si trova nella parte finale orizzontale
             else if (wagon_posx > trails_xPoints[binary][3]) {
-                train_par[trainId].wagons[wagonId].posy = (H - SPACE - TRAIN_H)/2;
+                train_par[trainId].wagons[wagonId].posy = (H - SPACE - TRAIN_H)/2;              // Riallineamento coordinata Y
             }  
             break;
 
         case FROM_DX:
 
-                if (wagon_posx < trails_xPoints[binary][2] - 18   &&   wagon_posx > trails_xPoints[binary][1] - 5) {
-                    train_par[trainId].wagons[wagonId].posy = (binary + 1)*SPACE - TRAIN_H/2;
+            // Vagone che si trova nella parte centrale orizzontale
+            if (wagon_posx < trails_xPoints[binary][2] - 18   &&   wagon_posx > trails_xPoints[binary][1] - 5) {
+                train_par[trainId].wagons[wagonId].posy = (binary + 1)*SPACE - TRAIN_H/2;       // Riallineamento coordinata Y
 
-                }
-                else if (wagon_posx < trails_xPoints[binary][0] - 6) {
-                    train_par[trainId].wagons[wagonId].posy = (H + SPACE - TRAIN_H)/2;
-                }
+            }
+            
+            // Vagone che si trova nella parte finale orizzontale
+            else if (wagon_posx < trails_xPoints[binary][0] - 6) {
+                train_par[trainId].wagons[wagonId].posy = (H + SPACE - TRAIN_H)/2;              // Riallineamento coordinata Y
+            }
             break;
 
         default:
@@ -731,6 +772,7 @@ void move_forward(int trainId, int wagonId, int step) {
 //-------------------------------------------------------------------------------------------------------------------------
 
 int sign(int x) {
+
     if (x >= 0)     return 1;
     else            return -1;
 }
@@ -790,6 +832,7 @@ void *train(void *p) {
             total_train_dl ++;                                          // Incremento variabile globale che conta tutti i DL miss dei task treno                              
         }
 
+        // Attesa prossima attivazione del task
         wait_for_activation(trainId);
     }
 

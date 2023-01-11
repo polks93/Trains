@@ -15,7 +15,7 @@ void binary_assignment(){
 
     bool    binary_assigned;
     int     i;
-    int     bin;
+    int     binary;
     int     trainId;
     int     priority;
     int     direction;
@@ -38,19 +38,19 @@ void binary_assignment(){
 
             // Dati del treno a cui va assegnato il binario
             pthread_mutex_lock(&train_par[trainId].mutex);
-            binary_assigned = train_par[trainId].binary_assigned;
-            priority        = train_par[trainId].priority;
-            direction       = train_par[trainId].direction;
+            binary_assigned   = train_par[trainId].binary_assigned;
+            priority          = train_par[trainId].priority;
+            direction         = train_par[trainId].direction;
             pthread_mutex_unlock(&train_par[trainId].mutex);
 
             if(binary_assigned == false) {
                 
                 // Politica di assegnazione del binario
-                bin = find_best_binary(direction, priority);
+                binary = find_best_binary(direction, priority);
 
                 // Update della struttra dati del treno
                 pthread_mutex_lock(&train_par[trainId].mutex);
-                train_par[trainId].binary             = bin;
+                train_par[trainId].binary             = binary;
                 train_par[trainId].binary_occupied    = true;
                 train_par[trainId].binary_assigned    = true;
                 pthread_mutex_unlock(&train_par[trainId].mutex);
@@ -67,8 +67,8 @@ void binary_assignment(){
 
                 // Incremento il numero di treni che andranno alla stessa stazione
                 pthread_mutex_lock(&trains_in_binary_mutex);
-                trains_in_binary[bin]++;   
-                pthread_mutex_unlock(&trains_in_binary_mutex);                
+                trains_in_binary[binary]++;   
+                pthread_mutex_unlock(&trains_in_binary_mutex);
             }
         }
     }

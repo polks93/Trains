@@ -45,7 +45,7 @@
 #define     TRAIN_SPACE                         (TRAIN_W + WAGONS_SPACE + 2)*WAGONS     // Ingombro del treno
 #define     STOP_SPACE                          TRAIN_W                                 // Spazio tra "testa" del treno e coordinata di stop
 #define     SLOW_DOWN_SPACE                     4*TRAIN_W                               // Lunghezza dello spazio in cui il treno deve frenare prima dello stop
-#define     MAX_VEL                             200                                     // Velocità massima del treno                                     
+#define     MAX_VEL                             150                                     // Velocità massima del treno                                     
 #define     MAX_ACC                             50                                      // Acellerazione massima del treno
 #define     MIN_MS_BETWEEN_TRAINS               1000                                    // Minimi MS tra un treno e il successivo
 #define     MAX_MS_BETWEEN_TRAINS               2000                                    // MS tra un treno e l'altro in caso di modalità automatica
@@ -67,7 +67,8 @@
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_ON        32                      // Posizione angolare dei binari mobili
 #define     TRAIL_DOWN_BIN_OUT_SWITCH_OFF       0                       // Posizione angolare dei binari mobili
 #define     TRAIL_ANGLE_INC                     4                       // Velocità angolare dei binari mobili
-#define     STOP_TIME                           1000                    // Tempo massimo di stop alla stazione
+#define     STOP_TIME                           1000                    // Durata minima semaforo rosso in stazione
+#define     MAX_WAITING_TIME                    8000                    // Tempo massimo di attesa in stazione
 
 // ------------------------------------- ASSEGANZIONE NOMI A VARIABILI NUMERICHE ------------------------------------- // 
 
@@ -189,6 +190,7 @@ struct train_parameters {
     int                 pos_in_queue;                       // Posizione del treno nell'eventuale coda
     int                 first_diagonal_wagon;               // Primo vagone che si sta muovendo in diagonale, in modo che quelli successivi ne seguano il movimento
     float               currentVel;                         // Velocità del treno
+    struct              timespec    waiting_in_station;     // Struttura temporale che contiene il momento dal quale il treno sta aspettando in stazione
     pthread_mutex_t     mutex;                              // Mutex associato al treno
     struct              wagon_parameters wagons[WAGONS];    // Struttura associata ai singoli vagoni del treno
     BITMAP              *bmp[3];                            // Bitmaps associati al treno

@@ -100,7 +100,7 @@ void global_variables_init(){
     max_prio_train_sx                       = 0;
     max_prio_train_dx                       = 0;
 
-    for (i = 0; i < STATIONS_NUM; i++)      trains_in_binary[i] = 0;
+    for (i = 0; i < STATIONS_NUM; i ++)         trains_in_binary[i] = 0;
     
     // POSIZIONE DELLE INTERSEZIONI TRA I BINARI
     // binario 1

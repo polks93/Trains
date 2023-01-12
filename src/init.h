@@ -46,7 +46,7 @@
 #define     STOP_SPACE                          TRAIN_W                                 // Spazio tra "testa" del treno e coordinata di stop
 #define     SLOW_DOWN_SPACE                     4*TRAIN_W                               // Lunghezza dello spazio in cui il treno deve frenare prima dello stop
 #define     MAX_VEL                             150                                     // Velocità massima del treno                                     
-#define     MAX_ACC                             50                                      // Acellerazione massima del treno
+#define     MAX_ACC                             50                                      // Accelerazione massima del treno
 #define     MIN_MS_BETWEEN_TRAINS               1500                                    // Minimi MS tra un treno e il successivo nella stessa direzione
 #define     MAX_MS_BETWEEN_TRAINS               2000                                    // MS tra un treno e l'altro in caso di modalità automatica
 
@@ -70,13 +70,13 @@
 #define     STOP_TIME                           1000                    // Durata minima semaforo rosso in stazione
 #define     MAX_WAITING_TIME                    8000                    // Tempo massimo di attesa in stazione
 
-// ------------------------------------- ASSEGANZIONE NOMI A VARIABILI NUMERICHE ------------------------------------- // 
+// ------------------------------------- ASSEGNAZIONE NOMI A VARIABILI NUMERICHE ------------------------------------- // 
 
 // Macchina a stati del task train
 enum train_states{
     GO_FAST     = 0,    // Andatura normale
     SLOW_DOWN   = 1,    // Rallentare prima di una fermata
-    SPEED_UP    = 2,    // Acellerare dopo una fermata
+    SPEED_UP    = 2,    // Accelerare dopo una fermata
     WAIT        = 3,    // Attesa
     STOP        = 4,    // Stop alla fermata quando il treno è il primo della coda
     QUEUE       = 5     // All'interno di una coda

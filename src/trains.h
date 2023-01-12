@@ -46,7 +46,7 @@ int state_queue(int trainId, int direction);
 int state_stop (int trainId);
 
 /**
- * Stato che fa acellerare il treno dopo una fermata
+ * Stato che fa accelerare il treno dopo una fermata
  */
 int state_speed_up (int trainId);
 
@@ -96,7 +96,7 @@ void move_forward (int trainId, int wagonId, int step);
  * Gestisce tutto il movimento del treno:
  * - Attende l'asssegnazione del binario da parte della stazione
  * - Controlla il prossimo stop, che gli viene indicato dal task station manager
- * - Decide se rallentare, acellerare o muoversi alla massima velocità a seconda della condizione in cui si trova
+ * - Decide se rallentare, accelerare o muoversi alla massima velocità a seconda della condizione in cui si trova
  */
 void *train (void *p);
 

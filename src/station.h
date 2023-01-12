@@ -116,9 +116,10 @@ void manage_station_out_DX();
 bool check_green_time (int direction);
 
 /**
- * Cerca il treno a priorità maggiore tra quelli in attesa
+ * Cerca il treno a priorità maggiore tra quelli in attesa tra tutte le stazioni
  */
 int search_for_max_prio_train (int direction);
+
 
 /**
  * Manda il comando per muovere i binari mobili in uscita dalla stazione

@@ -1074,8 +1074,9 @@ bool check_green_time (int direction) {
 //-------------------------------------------------------------------------------------------------------------------------
 int search_for_max_prio_train (int direction) {
 
+    bool    station_status;
     int     stationId;
-    int     train_id;
+    int     trainId;
     int     priority;
     int     binary;
     int     max_priority_train_id;
@@ -1101,21 +1102,23 @@ int search_for_max_prio_train (int direction) {
     for (stationId = first_station; stationId <= first_station + 3; stationId ++) {
         
         pthread_mutex_lock(&station[stationId].mutex);
-        train_id = station[stationId].queue_list[0];        // Id del primo treno in coda a ciascuna stazione
+        if (station[stationId].status == false)             trainId = station[stationId].queue_list[0];        // Id del primo treno in coda a ciascuna stazione
         pthread_mutex_unlock(&station[stationId].mutex);
 
-        pthread_mutex_lock(&train_par[train_id].mutex);
-        priority    = train_par[train_id].priority;         // Priorità di trainId
-        binary      = train_par[train_id].binary;           // Binario di trainID
-        pthread_mutex_unlock(&train_par[train_id].mutex);
+        if (trainId != 0) {
+            pthread_mutex_lock(&train_par[trainId].mutex);
+            priority    = train_par[trainId].priority;         // Priorità di trainId
+            binary      = train_par[trainId].binary;           // Binario di trainID
+            pthread_mutex_unlock(&train_par[trainId].mutex);
 
-        if (priority > max_priority ||                                                                      
-            priority == max_priority && binary > max_priority_train_bin && direction == FROM_SX ||      // FROM_SX: In caso di priorità uguali, predilige quello con binario maggiore
-            priority == max_priority && binary < max_priority_train_bin && direction == FROM_DX) {      // FROM_DX: In caso di priorità uguali, predilige quello con binario minore
+            if (priority > max_priority ||                                                                      
+                priority == max_priority && binary > max_priority_train_bin && direction == FROM_SX ||      // FROM_SX: In caso di priorità uguali, predilige quello con binario maggiore
+                priority == max_priority && binary < max_priority_train_bin && direction == FROM_DX) {      // FROM_DX: In caso di priorità uguali, predilige quello con binario minore
 
-            max_priority            = priority;
-            max_priority_train_id   = train_id;
-            max_priority_train_bin  = binary;
+                max_priority            = priority;
+                max_priority_train_id   = trainId;
+                max_priority_train_bin  = binary;
+            }
         }
     }
     return      max_priority_train_id;

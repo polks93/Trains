@@ -47,7 +47,7 @@
 #define     SLOW_DOWN_SPACE                     4*TRAIN_W                               // Lunghezza dello spazio in cui il treno deve frenare prima dello stop
 #define     MAX_VEL                             150                                     // Velocità massima del treno                                     
 #define     MAX_ACC                             50                                      // Acellerazione massima del treno
-#define     MIN_MS_BETWEEN_TRAINS               1000                                    // Minimi MS tra un treno e il successivo
+#define     MIN_MS_BETWEEN_TRAINS               1500                                    // Minimi MS tra un treno e il successivo nella stessa direzione
 #define     MAX_MS_BETWEEN_TRAINS               2000                                    // MS tra un treno e l'altro in caso di modalità automatica
 
 // Semafori, stazioni e binari

@@ -80,7 +80,7 @@ void binary_assignment(){
 
 int find_best_binary (int train_direction, int train_priority){
 
-    int bin;
+    int binary;
 
     pthread_mutex_lock(&trains_in_binary_mutex);
     switch (train_direction) {
@@ -92,23 +92,23 @@ int find_best_binary (int train_direction, int train_priority){
 
         // Treni a HP prediligono i binari più vicini al centro 
         case HIGH_PRIO:
-            if      (trains_in_binary[3] <= trains_in_binary[2])        bin = 3;
-            else if (trains_in_binary[2] <= trains_in_binary[1])        bin = 2;
-            else if (trains_in_binary[1] <= trains_in_binary[0])        bin = 1;
-            else                                                        bin = 0;
+            if      (trains_in_binary[3] <= trains_in_binary[2])        binary = 3;
+            else if (trains_in_binary[2] <= trains_in_binary[1])        binary = 2;
+            else if (trains_in_binary[1] <= trains_in_binary[0])        binary = 1;
+            else                                                        binary = 0;
             break;
 
         // Treni a MP non possono andare sul binario centrare
         case MEDIUM_PRIO:
-            if      (trains_in_binary[2] <= trains_in_binary[1])        bin = 2;
-            else if (trains_in_binary[1] <= trains_in_binary[0])        bin = 1;
-            else                                                        bin = 0;
+            if      (trains_in_binary[2] <= trains_in_binary[1])        binary = 2;
+            else if (trains_in_binary[1] <= trains_in_binary[0])        binary = 1;
+            else                                                        binary = 0;
             break;
 
         // Treni a LP possono andare solo sui due binari esterni
         case LOW_PRIO:
-            if (trains_in_binary[1] <= trains_in_binary[0])             bin = 1;
-            else                                                        bin = 0;
+            if (trains_in_binary[1] <= trains_in_binary[0])             binary = 1;
+            else                                                        binary = 0;
             break;
 
         default:
@@ -123,23 +123,23 @@ int find_best_binary (int train_direction, int train_priority){
 
         // Treni a HP prediligono i binari più vicini al centro 
         case HIGH_PRIO:
-            if      (trains_in_binary[4] <= trains_in_binary[5])        bin = 4;
-            else if (trains_in_binary[5] <= trains_in_binary[6])        bin = 5;
-            else if (trains_in_binary[6] <= trains_in_binary[7])        bin = 6;
-            else                                                        bin = 7;
+            if      (trains_in_binary[4] <= trains_in_binary[5])        binary = 4;
+            else if (trains_in_binary[5] <= trains_in_binary[6])        binary = 5;
+            else if (trains_in_binary[6] <= trains_in_binary[7])        binary = 6;
+            else                                                        binary = 7;
             break;
 
         // Treni a MP non possono andare sul binario centrare
         case MEDIUM_PRIO:
-            if      (trains_in_binary[5] <= trains_in_binary[6])        bin = 5;
-            else if (trains_in_binary[6] <= trains_in_binary[7])        bin = 6;
-            else                                                        bin = 7;
+            if      (trains_in_binary[5] <= trains_in_binary[6])        binary = 5;
+            else if (trains_in_binary[6] <= trains_in_binary[7])        binary = 6;
+            else                                                        binary = 7;
             break;
 
         // Treni a LP possono andare solo sui due binari esterni
         case LOW_PRIO:
-            if (trains_in_binary[6] <= trains_in_binary[7])             bin = 6;
-            else                                                        bin = 7;
+            if (trains_in_binary[6] <= trains_in_binary[7])             binary = 6;
+            else                                                        binary = 7;
             break;
 
         default:
@@ -152,7 +152,7 @@ int find_best_binary (int train_direction, int train_priority){
     }
     pthread_mutex_unlock(&trains_in_binary_mutex);
 
-    return bin;
+    return binary;
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
